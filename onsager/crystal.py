@@ -2034,6 +2034,9 @@ class pureDBContainer(object):
         return iorlist
 
     def makeDbGops(self, crys, chem, iorlist):
+        """
+        For the case of pure dumbbells, negative orientations give same state
+        """
         G = []
         G_crys = {}
         for g in crys.G:
@@ -2242,15 +2245,6 @@ class mixedDBContainer(pureDBContainer):
     def __init__(self, crys, chem, family):
         pureDBContainer.__init__(self, crys, chem, family)
 
-    @staticmethod
-    def invmapping(symindlist):
-        # Sanity checks between iorlist and symorlist is performed during testing
-        invmap = np.zeros(sum([len(lst) for lst in symindlist]), dtype=int)
-        for symind, symlist in enumerate(symindlist):
-            for st_idx in symlist:
-                invmap[st_idx] = symind
-        return invmap
-
     def genmixedsets(self):
         """
         function to generate (i,or) list for mixed dumbbells.
@@ -2284,6 +2278,9 @@ class mixedDBContainer(pureDBContainer):
         return pairlist
 
     def makeDbGops(self, crys, chem, iorlist):
+        """
+        This will be different to pureDBcontainer's, since negative orientation imply different states
+        """
         G = []
         G_crys = {}
         for g in crys.G:
@@ -2301,30 +2298,6 @@ class mixedDBContainer(pureDBContainer):
             G.append(gdumb)
             G_crys[gdumb] = g
         return frozenset(G), G_crys
-
-    def gensymset(self):
-        """
-        Takes in a flat list of (i,or) pairs and groups them according to symmetry
-        """
-        symIorList = []
-        symIndlist = []
-        allIndlist = set([])
-        for idx, (i, o) in enumerate(self.iorlist):
-            if idx in allIndlist:
-                continue
-            newlist = []
-            newindlist = []
-            for gdumb in self.G:
-                idxnew = gdumb.indexmap[0][idx]
-                if idxnew in allIndlist:
-                    continue
-                allIndlist.add(idxnew)
-                newindlist.append(idxnew)
-                newlist.append(self.iorlist[idxnew])
-            symIndlist.append(newindlist)
-            symIorList.append(newlist)
-
-        return symIorList, symIndlist
 
     def jumpnetwork(self, cutoff, solt_solv_cut, closestdistance):
         """
@@ -2412,15 +2385,3 @@ class mixedDBContainer(pureDBContainer):
             if t[0]==tup[0] and np.allclose(t[1], tup[1], atol = 1e-8):
                 return idx
         raise ValueError("The given site orientation pair {} is not present in the container".format(t))
-
-    def db2ind(self, db):
-        """
-        :param db: dumbbell object
-        :return:
-        """
-        if not isinstance(db, dumbbell):
-            raise TypeError("Input object must be dumbbell")
-        i = self.iorlist[db.iorind][0]
-        o = self.iorlist[db.iorind][1]
-
-        return self.getIndex((i, o))
