@@ -2237,24 +2237,10 @@ class pureDBContainer(object):
 # In mixed dumbbells, the orientation vector always points towards the solute.
 # A mixed dumbbell orientation vector and its negative denote different mixed dumbbell states.
 
-class mixedDBContainer(object):
+class mixedDBContainer(pureDBContainer):
 
     def __init__(self, crys, chem, family):
-        if not isinstance(family, list):
-            raise TypeError("Enter the families as a list of lists")
-        # Should I just inherit dbStates here?
-        self.crys = crys
-        self.chem = chem
-        self.family = family
-        # make the dumbbell states, change the indexmap of the grouops and store original groupops in G_crys
-        self.iorlist = self.genmixedsets()
-        self.G, self.G_crys, = self.makeDbGops(self.crys, self.chem, self.iorlist)
-        self.symorlist, self.symIndlist = self.gensymset()  # make this an indexed list
-        # Store both iorlist and symorlist so that we can compare them later if needed.
-        self.threshold = crys.threshold
-        self.invmap = self.invmapping(self.symIndlist)
-
-        # Invmap says which (i, or) pair is present in which symmetric (i, or) list
+        pureDBContainer.__init__(self, crys, chem, family)
 
     @staticmethod
     def invmapping(symindlist):
