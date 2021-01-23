@@ -61,7 +61,7 @@ def collision_self(dbcontainer, dbcontainer2, jump, cutoff12, cutoff13=None):
 
         R2f = crys.unit2cart(jump.state1.R, crys.basis[chem][dbcontainer.iorlist[jump.state1.iorind][0]])
 
-        R3f = crys.unit2cart(jump.state2.R, crys.basis[chem][dbcontainer2.iorlist[jump.state1.iorind][0]]) -\
+        R3f = crys.unit2cart(jump.state2.R, crys.basis[chem][dbcontainer2.iorlist[jump.state2.iorind][0]]) -\
               (jump.c2 / 2.) * dbcontainer2.iorlist[jump.state2.iorind][1]
         # print(R1i,R2i,R3i,R1f,R2f,R3f)
     else:
