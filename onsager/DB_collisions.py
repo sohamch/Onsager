@@ -1,5 +1,5 @@
 import numpy as np
-from onsager.crystal import dumbbell, SdPair, jump
+from onsager.DB_structs import dumbbell, SdPair, jump
 
 def collision_self(dbcontainer, dbcontainer2, jump, cutoff12, cutoff13=None):
     """
