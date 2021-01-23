@@ -1,9 +1,9 @@
 import numpy as np
 from onsager.DB_collisions import *
 import unittest
-from test_structs import *
+from crysts import *
 import onsager.crystal as crystal
-from onsager.crystal import dumbbell, SdPair, jump
+from onsager.DB_structs import dumbbell, SdPair, jump
 
 class collision_tests(unittest.TestCase):
 

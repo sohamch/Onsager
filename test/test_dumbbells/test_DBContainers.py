@@ -1,9 +1,6 @@
 import numpy as np
-import onsager.crystal as crystal
-from states import *
-from representations import *
-from test_structs import *
-# from gensets import *
+from onsager.crystal import dumbbell, SdPair, jump
+from crysts import *
 import itertools
 import unittest
 
@@ -17,7 +14,7 @@ class test_statemaking(unittest.TestCase):
 
     def test_dbStates(self):
         # check that symmetry analysis is correct
-        dbstates = dbStates(self.crys, 0, self.family)
+        dbstates = crystal.pureDBContainer(self.crys, 0, self.family)
         self.assertEqual(len(dbstates.symorlist), 4)
         # check that every (i,or) set is accounted for
         sm = 0
@@ -53,7 +50,7 @@ class test_statemaking(unittest.TestCase):
         # cube
         famp0 = [np.array([1., 0., 0.]) / np.linalg.norm(np.array([1., 0., 0.])) * 0.126]
         family = [famp0]
-        pdbcontainer_cube = dbStates(cube, 0, family)
+        pdbcontainer_cube = crystal.pureDBContainer(cube, 0, family)
         jset_cube, jind_cube = pdbcontainer_cube.jumpnetwork(0.3, 0.01, 0.01)
         test_dbi = dumbbell(pdbcontainer_cube.getIndex((0, np.array([0.126, 0., 0.]))), np.array([0, 0, 0]))
         test_dbf = dumbbell(pdbcontainer_cube.getIndex((0, np.array([0.126, 0., 0.]))), np.array([0, 1, 0]))
@@ -76,7 +73,7 @@ class test_statemaking(unittest.TestCase):
         fcc = crystal.Crystal.FCC(0.55)
         famp0 = [np.array([1., 1., 0.]) / np.sqrt(2) * 0.2]
         family = [famp0]
-        pdbcontainer_fcc = dbStates(fcc, 0, family)
+        pdbcontainer_fcc = crystal.pureDBContainer(fcc, 0, family)
         jset_fcc, jind_fcc = pdbcontainer_fcc.jumpnetwork(0.4, 0.01, 0.01)
         o1 = np.array([1., -1., 0.]) * 0.2 / np.sqrt(2)
         if any(np.allclose(-o1, o) for i, o in pdbcontainer_fcc.iorlist):
@@ -100,7 +97,7 @@ class test_statemaking(unittest.TestCase):
         DC_Si = crystal.Crystal(latt, [[np.array([0., 0., 0.]), np.array([0.25, 0.25, 0.25])]], ["Si"])
         famp0 = [np.array([1., 1., 0.]) / np.sqrt(2) * 0.2]
         family = [famp0]
-        pdbcontainer_si = dbStates(DC_Si, 0, family)
+        pdbcontainer_si = crystal.pureDBContainer(DC_Si, 0, family)
         jset_si, jind_si = pdbcontainer_si.jumpnetwork(0.4, 0.01, 0.01)
         o1 = np.array([1., -1., 0.]) * 0.2 / np.sqrt(2)
         if any(np.allclose(-o1, o) for i, o in pdbcontainer_si.iorlist):
@@ -122,7 +119,7 @@ class test_statemaking(unittest.TestCase):
         Mg = crystal.Crystal.HCP(0.3294, chemistry=["Mg"])
         famp0 = [np.array([1., 0., 0.]) * 0.145]
         family = [famp0]
-        pdbcontainer_hcp = dbStates(Mg, 0, family)
+        pdbcontainer_hcp = crystal.pureDBContainer(Mg, 0, family)
         jset_hcp, jind_hcp = pdbcontainer_hcp.jumpnetwork(0.45, 0.01, 0.01)
         o = np.array([0.145, 0., 0.])
         if any(np.allclose(-o, o1) for i, o1 in pdbcontainer_hcp.iorlist):
@@ -157,12 +154,12 @@ class test_statemaking(unittest.TestCase):
                     self.assertEqual(pdbcontainer.iorlist[jset[lindex][jindex].state2.iorind][0], i2)
                     self.assertTrue(np.allclose(pdbcontainer.iorlist[jset[lindex][jindex].state1.iorind][1], o1))
                     self.assertTrue(np.allclose(pdbcontainer.iorlist[jset[lindex][jindex].state2.iorind][1], o2))
-                    dx = disp(pdbcontainer, jset[lindex][jindex].state1, jset[lindex][jindex].state2)
+                    dx = crystal.DB_disp(pdbcontainer, jset[lindex][jindex].state1, jset[lindex][jindex].state2)
                     self.assertTrue(np.allclose(dx, jind[lindex][jindex][1]))
 
     def test_mStates(self):
-        dbstates = dbStates(self.crys, 0, self.family)
-        mstates1 = mStates(self.crys, 0, self.family)
+        dbstates = crystal.pureDBContainer(self.crys, 0, self.family)
+        mstates1 = crystal.mixedDBContainer(self.crys, 0, self.family)
 
         # check that symmetry analysis is correct
         self.assertEqual(len(mstates1.symorlist), 4)
@@ -203,7 +200,7 @@ class test_statemaking(unittest.TestCase):
         DC_Si = crystal.Crystal(latt, [[np.array([0., 0., 0.]), np.array([0.25, 0.25, 0.25])]], ["Si"])
         famp0 = [np.array([1., 1., 0.]) / np.sqrt(2) * 0.2]
         family = [famp0]
-        mdbcontainer = mStates(DC_Si, 0, family)
+        mdbcontainer = crystal.mixedDBContainer(DC_Si, 0, family)
         jset, jind = mdbcontainer.jumpnetwork(0.4, 0.01, 0.01)
         o1 = np.array([1., 1., 0.]) * 0.2 / np.sqrt(2)
         # if any(np.allclose(-o1, o) for i, o in pdbcontainer.iorlist):
@@ -266,7 +263,7 @@ class test_2d(test_statemaking):
 
     def test_dbStates(self):
         # check that symmetry analysis is correct
-        dbstates = dbStates(self.crys, 0, self.family)
+        dbstates = crystal.pureDBContainer(self.crys, 0, self.family)
         self.assertEqual(len(dbstates.symorlist), 1)
         # check that every (i,or) set is accounted for
         sm = 0
@@ -298,8 +295,8 @@ class test_2d(test_statemaking):
                 self.assertTrue(np.allclose(st_iorlist[1], state[1], atol=dbstates.crys.threshold))
 
     def test_mStates(self):
-        dbstates = dbStates(self.crys, 0, self.family)
-        mstates1 = mStates(self.crys, 0, self.family)
+        dbstates = crystal.pureDBContainer(self.crys, 0, self.family)
+        mstates1 = crystal.mixedDBContainer(self.crys, 0, self.family)
 
         # check that symmetry analysis is correct
         self.assertEqual(len(mstates1.symorlist), 1)
