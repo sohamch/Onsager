@@ -19,13 +19,13 @@ class test_vecstars(unittest.TestCase):
         famp0 = [o.copy()]
         family = [famp0]
 
-        self.pdbcontainer_si = pureDBContainer(self.DC_Si, 0, family)
-        self.mdbcontainer_si = mixedDBContainer(self.DC_Si, 0, family)
+        self.pdbcontainer = pureDBContainer(self.DC_Si, 0, family)
+        self.mdbcontainer = mixedDBContainer(self.DC_Si, 0, family)
 
-        self.jset0, self.jset2 = self.pdbcontainer_si.jumpnetwork(0.3, 0.01, 0.01), self.mdbcontainer_si.jumpnetwork(
+        self.jset0, self.jset2 = self.pdbcontainer.jumpnetwork(0.3, 0.01, 0.01), self.mdbcontainer.jumpnetwork(
             0.3, 0.01, 0.01)
 
-        self.crys_stars = DBStarSet(self.pdbcontainer_si, self.mdbcontainer_si, self.jset0, self.jset2, Nshells=1)
+        self.crys_stars = DBStarSet(self.pdbcontainer, self.mdbcontainer, self.jset0, self.jset2, Nshells=1)
         self.vec_stars = DBVectorStars(self.crys_stars)
 
         self.om2tags = self.vec_stars.starset.jtags2
@@ -230,10 +230,10 @@ class test_vecstars(unittest.TestCase):
                     for j in jumplist:
                         if st == j.state1:
                             count += 1
-                            dx = DB_disp(self.pdbcontainer_si, j.state1, j.state2)
+                            dx = DB_disp(self.pdbcontainer, j.state1, j.state2)
                             bias_st += dx * self.W0list[jt]
                         if st2 == j.state1:
-                            dx = DB_disp(self.pdbcontainer_si, j.state1, j.state2)
+                            dx = DB_disp(self.pdbcontainer, j.state1, j.state2)
                             bias_st2 += dx * self.W0list[jt]
 
                 biasBareExp = self.biases[-1]
@@ -266,7 +266,7 @@ class test_vecstars(unittest.TestCase):
                         for j in jumplist:
                             if st == j.state1:
                                 count += 1
-                                dx = DB_disp(self.pdbcontainer_si, j.state1, j.state2)
+                                dx = DB_disp(self.pdbcontainer, j.state1, j.state2)
                                 bias_st += dx * self.W0list[jt]
                                 # print(bias_st)
                     self.assertTrue(np.allclose(bias_st, np.zeros(self.crys_stars.crys.dim)))
@@ -290,10 +290,10 @@ class test_vecstars(unittest.TestCase):
                 for j in jlist:
                     if st == j.state1:
                         count += 1
-                        dx = DB_disp(self.pdbcontainer_si, j.state1, j.state2)
+                        dx = DB_disp(self.pdbcontainer, j.state1, j.state2)
                         bias_st_solvent += self.W1list[jt] * dx
                     if st2 == j.state1:
-                        dx = DB_disp(self.pdbcontainer_si, j.state1, j.state2)
+                        dx = DB_disp(self.pdbcontainer, j.state1, j.state2)
                         bias_st_solvent2 += self.W1list[jt] * dx
 
             bias1expansion_solute, bias1expansion_solvent = self.biases[1]
@@ -766,9 +766,10 @@ class test_vecstars(unittest.TestCase):
                 self.assertTrue(outer[:, :, i, j].shape == (dim, dim))
                 self.assertTrue(np.allclose(outer[:, :, i, j], np.zeros((dim, dim))))
 
-class test_Si(test_vecstars):
+class test_Si(test_vecstars, unittest.TestCase):
 
     def setUp(self):
+        print("Running Si SetUp")
         latt = np.array([[0., 0.5, 0.5], [0.5, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
         self.DC_Si = crystal.Crystal(latt, [[np.array([0., 0., 0.]), np.array([0.25, 0.25, 0.25])]], ["Si"])
         # keep it simple with [1.,0.,0.] type orientations for now
@@ -776,13 +777,13 @@ class test_Si(test_vecstars):
         famp0 = [o.copy()]
         family = [famp0]
 
-        self.pdbcontainer_si = pureDBContainer(self.DC_Si, 0, family)
-        self.mdbcontainer_si = pureDBContainer(self.DC_Si, 0, family)
+        self.pdbcontainer = pureDBContainer(self.DC_Si, 0, family)
+        self.mdbcontainer = mixedDBContainer(self.DC_Si, 0, family)
 
-        self.jset0, self.jset2 = self.pdbcontainer_si.jumpnetwork(0.3, 0.01, 0.01), self.mdbcontainer_si.jumpnetwork(
+        self.jset0, self.jset2 = self.pdbcontainer.jumpnetwork(0.3, 0.01, 0.01), self.mdbcontainer.jumpnetwork(
             0.3, 0.01, 0.01)
 
-        self.crys_stars = DBStarSet(self.pdbcontainer_si, self.mdbcontainer_si, self.jset0, self.jset2, Nshells=1)
+        self.crys_stars = DBStarSet(self.pdbcontainer, self.mdbcontainer, self.jset0, self.jset2, Nshells=1)
         self.vec_stars = DBVectorStars(self.crys_stars)
 
         self.om2tags = self.vec_stars.starset.jtags2
@@ -804,7 +805,85 @@ class test_Si(test_vecstars):
         self.biases = self.vec_stars.biasexpansion(self.jnet_1, self.jset2[0], self.jtype, self.symjumplist_omega43_all)
         self.rateExps = self.vec_stars.rateexpansion(self.jnet_1, self.jtype, self.symjumplist_omega43_all)
         print(len(self.vec_stars.vecpos_bare))
-        print("Instantiated")
+        print("Si Instantiated")
+
+class test_BCC(test_vecstars, unittest.TestCase):
+
+    def setUp(self):
+        print("Running BCC SetUp")
+        self.BCC = crystal.Crystal.BCC(0.4, "Fe")
+        # keep it simple with [1.,0.,0.] type orientations for now
+        o = np.array([1., 1., 0.]) / np.linalg.norm(np.array([1., 1., 0.])) * 0.2
+        famp0 = [o.copy()]
+        family = [famp0]
+
+        self.pdbcontainer = pureDBContainer(self.BCC, 0, family)
+        self.mdbcontainer = mixedDBContainer(self.BCC, 0, family)
+
+        self.jset0, self.jset2 = self.pdbcontainer.jumpnetwork(0.35, 0.01, 0.01), self.mdbcontainer.jumpnetwork(
+            0.35, 0.01, 0.01)
+
+        self.crys_stars = DBStarSet(self.pdbcontainer, self.mdbcontainer, self.jset0, self.jset2, Nshells=1)
+        self.vec_stars = DBVectorStars(self.crys_stars)
+
+        self.om2tags = self.vec_stars.starset.jtags2
+        # generate 1, 3 and 4 jumpnetworks
+        (self.jnet_1, self.jnet_1_indexed, self.om1tags), self.jtype = self.crys_stars.jumpnetwork_omega1()
+        (self.symjumplist_omega43_all, self.symjumplist_omega43_all_indexed), (
+            self.symjumplist_omega4, self.symjumplist_omega4_indexed, self.om4tags), (
+            self.symjumplist_omega3, self.symjumplist_omega3_indexed,
+            self.om3tags) = self.crys_stars.jumpnetwork_omega34(0.35, 0.01, 0.01, 0.01)
+
+        self.W0list = np.random.rand(len(self.vec_stars.starset.jnet0))
+        self.W1list = np.random.rand(len(self.jnet_1))
+        self.W2list = np.random.rand(len(self.jset2[0]))
+        self.W3list = np.random.rand(len(self.symjumplist_omega3))
+        self.W4list = np.random.rand(len(self.symjumplist_omega4))
+
+        # generate all the bias expansions - will separate out later
+        self.biases = self.vec_stars.biasexpansion(self.jnet_1, self.jset2[0], self.jtype, self.symjumplist_omega43_all)
+        self.rateExps = self.vec_stars.rateexpansion(self.jnet_1, self.jtype, self.symjumplist_omega43_all)
+        print(len(self.vec_stars.vecpos_bare))
+        print("BCC Instantiated")
+
+class test_FCC(test_vecstars, unittest.TestCase):
+
+    def setUp(self):
+        print("Running FCC SetUp")
+        self.BCC = crystal.Crystal.FCC(0.4, "Ni")
+        # keep it simple with [1.,0.,0.] type orientations for now
+        o = np.array([1., 1., 0.]) / np.linalg.norm(np.array([1., 1., 0.])) * 0.2
+        famp0 = [o.copy()]
+        family = [famp0]
+
+        self.pdbcontainer = pureDBContainer(self.BCC, 0, family)
+        self.mdbcontainer = mixedDBContainer(self.BCC, 0, family)
+
+        self.jset0, self.jset2 = self.pdbcontainer.jumpnetwork(0.3, 0.01, 0.01), self.mdbcontainer.jumpnetwork(
+            0.3, 0.01, 0.01)
+
+        self.crys_stars = DBStarSet(self.pdbcontainer, self.mdbcontainer, self.jset0, self.jset2, Nshells=1)
+        self.vec_stars = DBVectorStars(self.crys_stars)
+
+        self.om2tags = self.vec_stars.starset.jtags2
+        # generate 1, 3 and 4 jumpnetworks
+        (self.jnet_1, self.jnet_1_indexed, self.om1tags), self.jtype = self.crys_stars.jumpnetwork_omega1()
+        (self.symjumplist_omega43_all, self.symjumplist_omega43_all_indexed), (
+            self.symjumplist_omega4, self.symjumplist_omega4_indexed, self.om4tags), (
+            self.symjumplist_omega3, self.symjumplist_omega3_indexed,
+            self.om3tags) = self.crys_stars.jumpnetwork_omega34(0.3, 0.01, 0.01, 0.01)
+
+        self.W0list = np.random.rand(len(self.vec_stars.starset.jnet0))
+        self.W1list = np.random.rand(len(self.jnet_1))
+        self.W2list = np.random.rand(len(self.jset2[0]))
+        self.W3list = np.random.rand(len(self.symjumplist_omega3))
+        self.W4list = np.random.rand(len(self.symjumplist_omega4))
+
+        # generate all the bias expansions - will separate out later
+        self.biases = self.vec_stars.biasexpansion(self.jnet_1, self.jset2[0], self.jtype, self.symjumplist_omega43_all)
+        self.rateExps = self.vec_stars.rateexpansion(self.jnet_1, self.jtype, self.symjumplist_omega43_all)
+        print(len(self.vec_stars.vecpos_bare))
+        print("FCC Instantiated")
 
 class test_2d(test_vecstars):
 
@@ -815,12 +894,12 @@ class test_2d(test_vecstars):
         famp02d = [o.copy()]
         family2d = [famp02d]
 
-        self.pdbcontainer_si = pureDBContainer(self.crys2d, 0, family2d)
-        self.mdbcontainer_si = mixedDBContainer(self.crys2d, 0, family2d)
+        self.pdbcontainer = pureDBContainer(self.crys2d, 0, family2d)
+        self.mdbcontainer = mixedDBContainer(self.crys2d, 0, family2d)
 
-        jset02d, jset22d = self.pdbcontainer_si.jumpnetwork(1.51, 0.01, 0.01), self.mdbcontainer_si.jumpnetwork(1.51, 0.01, 0.01)
+        jset02d, jset22d = self.pdbcontainer.jumpnetwork(1.51, 0.01, 0.01), self.mdbcontainer.jumpnetwork(1.51, 0.01, 0.01)
 
-        self.crys_stars = DBStarSet(self.pdbcontainer_si, self.mdbcontainer_si, jset02d, jset22d, Nshells=1)
+        self.crys_stars = DBStarSet(self.pdbcontainer, self.mdbcontainer, jset02d, jset22d, Nshells=1)
         self.vec_stars = DBVectorStars(self.crys_stars)
 
         self.om2tags = self.vec_stars.starset.jtags2
