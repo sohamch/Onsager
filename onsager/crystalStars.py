@@ -1697,7 +1697,7 @@ class DBStarSet(object):
 
 # Next, vector stars for dumbbells
 
-class vectorStars(object):
+class DBVectorStars(object):
     """
     Stores the vector stars corresponding to a given starset of dumbbell states
     """
