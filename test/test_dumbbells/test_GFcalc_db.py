@@ -2,7 +2,7 @@ import onsager.crystal as crystal
 import numpy as np
 from scipy import special
 from onsager.GFcalc import *
-from onsager.crystal import pureDBContainer
+from onsager.crystal import Crystal, pureDBContainer
 from crysts import *
 import unittest
 """
@@ -41,6 +41,53 @@ class GreenFuncCrystalTests(unittest.TestCase):
         family = [famp0]
         pdbcontainer = pureDBContainer(cube,0,family)
         jset,jind = pdbcontainer.jumpnetwork(0.3,0.01,0.01)
+        cube_GF = GF_dumbbells(pdbcontainer, jind)
+        preT = list(np.ones(len(jind)))
+        betaeneT = list(np.ones(len(jind)))
+        cube_GF.SetRates([1], [0], preT, betaeneT)
+        # test the pole function:
+        for u in np.linspace(0, 5, 21):
+            pole_orig = cube_GF.crys.volume * poleFT(cube_GF.d, u, cube_GF.pmax)
+            pole_new = cube_GF.g_Taylor_fnlu[(-2, 0)](u).real
+            self.assertAlmostEqual(pole_orig, pole_new, places=15, msg="Pole (-2,0) failed for u={}".format(u))
+        # test the discontinuity function:
+        for u in np.linspace(0, 5, 21):
+            disc_orig = cube_GF.crys.volume * (cube_GF.pmax / (2 * np.sqrt(np.pi))) ** 3 * \
+                        np.exp(-(0.5 * u * cube_GF.pmax) ** 2) / np.sqrt(np.product(cube_GF.d))
+            disc_new = cube_GF.g_Taylor_fnlu[(0, 0)](u).real
+            self.assertAlmostEqual(disc_orig, disc_new, places=15, msg="Disc (0,0) failed for u={}".format(u))
+
+    def test_BCC(self):
+        """Tests on BCC lattice"""
+
+        famp0 = [np.array([1., 1., 0.])/np.linalg.norm(np.array([1., 1., 0.]))*0.126]
+        family = [famp0]
+        pdbcontainer = pureDBContainer(Fe_bcc, 0, family)
+        jset,jind = pdbcontainer.jumpnetwork(0.25, 0.01, 0.01)
+        cube_GF = GF_dumbbells(pdbcontainer, jind)
+        preT = list(np.ones(len(jind)))
+        betaeneT = list(np.ones(len(jind)))
+        cube_GF.SetRates([1], [0], preT, betaeneT)
+        # test the pole function:
+        for u in np.linspace(0, 5, 21):
+            pole_orig = cube_GF.crys.volume * poleFT(cube_GF.d, u, cube_GF.pmax)
+            pole_new = cube_GF.g_Taylor_fnlu[(-2, 0)](u).real
+            self.assertAlmostEqual(pole_orig, pole_new, places=15, msg="Pole (-2,0) failed for u={}".format(u))
+        # test the discontinuity function:
+        for u in np.linspace(0, 5, 21):
+            disc_orig = cube_GF.crys.volume * (cube_GF.pmax / (2 * np.sqrt(np.pi))) ** 3 * \
+                        np.exp(-(0.5 * u * cube_GF.pmax) ** 2) / np.sqrt(np.product(cube_GF.d))
+            disc_new = cube_GF.g_Taylor_fnlu[(0, 0)](u).real
+            self.assertAlmostEqual(disc_orig, disc_new, places=15, msg="Disc (0,0) failed for u={}".format(u))
+
+    def test_FCC(self):
+        """Tests on FCC lattice"""
+
+        famp0 = [np.array([1., 0., 0.])/np.linalg.norm(np.array([1., 0., 0.]))*0.126]
+        family = [famp0]
+        FCC = Crystal.FCC(0.3, "Ni")
+        pdbcontainer = pureDBContainer(FCC, 0, family)
+        jset,jind = pdbcontainer.jumpnetwork(0.22, 0.01, 0.01)
         cube_GF = GF_dumbbells(pdbcontainer, jind)
         preT = list(np.ones(len(jind)))
         betaeneT = list(np.ones(len(jind)))
