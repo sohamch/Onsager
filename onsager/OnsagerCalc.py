@@ -1603,3 +1603,34 @@ class VacancyMediated(object):
 
 yaml.add_representer(vacancyThermoKinetics, vacancyThermoKinetics.vacancyThermoKinetics_representer)
 yaml.add_constructor(VACANCYTHERMOKINETICS_YAMLTAG, vacancyThermoKinetics.vacancyThermoKinetics_constructor)
+
+# Onsager calculator for dumbbell mediated diffusion
+
+# Functions to compute rates and energies
+def stateprob(pre, betaene, invmap):
+    """Returns our (i,or) probabilities, normalized, as a vector.
+       Straightforward extension from vacancy case.
+    """
+    # be careful to make sure that we don't under-/over-flow on beta*ene
+    minbetaene = min(betaene)
+    rho = np.array([pre[w] * np.exp(minbetaene - betaene[w]) for w in invmap])
+    return rho / sum(rho)
+
+
+# make a static method and reuse later for solute case?
+def ratelist(jumpnetwork, pre, betaene, preT, betaeneT, invmap):
+    """Returns a list of lists of rates, matched to jumpnetwork"""
+    stateene = np.array([betaene[w] for w in invmap])
+    statepre = np.array([pre[w] for w in invmap])
+    return [[pT * np.exp(stateene[i] - beT) / statepre[i]
+             for (i, j), dx in t]
+            for t, pT, beT in zip(jumpnetwork, preT, betaeneT)]
+
+
+def symmratelist(jumpnetwork, pre, betaene, preT, betaeneT, invmap):
+    """Returns a list of lists of symmetrized rates, matched to jumpnetwork"""
+    stateene = np.array([betaene[w] for w in invmap])
+    statepre = np.array([pre[w] for w in invmap])
+    return [[pT * np.exp(0.5 * stateene[i] + 0.5 * stateene[j] - beT) / np.sqrt(statepre[i] * statepre[j])
+             for (i, j), dx in t]
+            for t, pT, beT in zip(jumpnetwork, preT, betaeneT)]
