@@ -1372,20 +1372,18 @@ class test_dumbbell_mediated(unittest.TestCase):
 class test_BCC(test_dumbbell_mediated):
     def setUp(self):
         # We test a new weird lattice because it is more interesting
-
-        latt = np.array([[0., 0.1, 0.5], [0.3, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
         self.BCC = Crystal.BCC(0.2836, "A")
-        o = np.array([1., 1., 0.]) / np.linalg.norm(np.array([1., 1., 0.])) * 0.1
+        o = np.array([0.1, 0., 0.])
         famp0 = [o.copy()]
         family = [famp0]
 
         self.pdbcontainer = pureDBContainer(self.BCC, 0, family)
         self.mdbcontainer = mixedDBContainer(self.BCC, 0, family)
         self.jset0, self.jset2 = \
-            self.pdbcontainer_si.jumpnetwork(0.3, 0.01, 0.01), self.mdbcontainer.jumpnetwork(0.3, 0.01, 0.01)
+            self.pdbcontainer.jumpnetwork(0.25, 0.01, 0.01), self.mdbcontainer.jumpnetwork(0.25, 0.01, 0.01)
 
-        self.onsagercalculator = dumbbellMediated(self.pdbcontainer, self.mdbcontainer_si, self.jset0, self.jset2,
-                                                  0.3, 0.01, 0.01, 0.01, NGFmax=4, Nthermo=1)
+        self.onsagercalculator = dumbbellMediated(self.pdbcontainer, self.mdbcontainer, self.jset0, self.jset2,
+                                                  0.25, 0.01, 0.01, 0.01, NGFmax=4, Nthermo=1)
         # generate all the bias expansions - will separate out later
         self.biases = \
             self.onsagercalculator.vkinetic.biasexpansion(self.onsagercalculator.jnet1, self.onsagercalculator.jnet2,
