@@ -2257,15 +2257,26 @@ class dumbbellMediated(VacancyMediated):
 
         # we need omega2 only for the uncorrelated contributions.
         for jt, jlist in enumerate(self.jnet2):
-            st1 = jlist[0].state1.db
-            st2 = jlist[0].state2.db
+            st1 = jlist[0].state1
+            st2 = jlist[0].state2
 
-            w1 = self.vkinetic.stateToVecStar_mixed[st1]
-            w2 = self.vkinetic.stateToVecStar_mixed[st2]
+            crStar1 = self.vkinetic.starset.mdbcontainer.invmap[self.vkinetic.starset.mdbcontainer.db2ind(st1.db)]
+            crStar2 = self.vkinetic.starset.mdbcontainer.invmap[self.vkinetic.starset.mdbcontainer.db2ind(st2.db)]
 
-            omega2escape[w1, jt] = np.exp(-bFT2[jt] + bFdb2[w1])
-            omega2escape[w2, jt] = np.exp(-bFT2[jt] + bFdb2[w2])
-            omega2[jt] = np.sqrt(omega2escape[w1, jt] * omega2escape[w2, jt])
+            init2TS = np.exp(-bFT2[jt] + bFdb2[crStar1])
+            fin2TS = np.exp(-bFT2[jt] + bFdb2[crStar2])
+
+            omega2[jt] = np.sqrt(init2TS * fin2TS)
+
+            # get the vector stars
+            v1list = self.vkinetic.stateToVecStar_mixed[st1]
+            v2list = self.vkinetic.stateToVecStar_mixed[st2]
+
+            for (v1, in_v1) in v1list:
+                omega2escape[v1 - self.vkinetic.Nvstars_pure, jt] = init2TS
+
+            for (v2, in_v2) in v2list:
+                omega2escape[v2 - self.vkinetic.Nvstars_pure, jt] = fin2TS
 
         # build the omega1 lists
         for jt, jlist in enumerate(self.jnet1):
@@ -2355,12 +2366,6 @@ class dumbbellMediated(VacancyMediated):
 
         # Make g2 from omega2 and omega3 (escapes)
         om23 = np.zeros((self.vkinetic.Nvstars - Nvstars_pure, self.vkinetic.Nvstars - Nvstars_pure))
-
-        print("Star Counts : Total - {}, Pure - {}\n".format(self.vkinetic.Nvstars, Nvstars_pure))
-        print("rate2escape : {}".format(rate2escape.shape))
-        print("om2escape : {}".format(omega2escape.shape))
-        print("rate3escape : {}".format(rate3escape.shape))
-        print("om3escape : {}".format(omega3escape.shape))
 
         # off diagonal elements of om23
         om23[:, :] += np.dot(rate2expansion, omega2)

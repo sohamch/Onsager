@@ -9,12 +9,6 @@ import unittest
 class test_dumbbell_mediated(unittest.TestCase):
     def setUp(self):
         # We test a new weird lattice because it is more interesting
-        # latt = np.array([[0., 0.1, 0.5], [0.3, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
-        # self.DC_Si = crystal.Crystal(latt, [[np.array([0., 0., 0.]), np.array([0.25, 0.25, 0.25])]], ["Si"])
-        # # keep it simple with [1.,0.,0.] type orientations for now
-        # o = np.array([1., 0., 0.]) / np.linalg.norm(np.array([1., 0., 0.])) * 0.126
-        # famp0 = [o.copy()]
-        # family = [famp0]
 
         latt = np.array([[0.5, 0.5, 0.], [0., 0.5, 0.5], [0.5, 0., 0.5]]) * 0.55
         self.DC_Si = Crystal(latt, [[np.array([0., 0., 0.]), np.array([0.25, 0.25, 0.25])]], ["Si"])
@@ -23,8 +17,8 @@ class test_dumbbell_mediated(unittest.TestCase):
         famp0 = [o.copy()]
         family = [famp0]
 
-        self.pdbcontainer_si = dbStates(self.DC_Si, 0, family)
-        self.mdbcontainer_si = mStates(self.DC_Si, 0, family)
+        self.pdbcontainer_si = pureDBContainer(self.DC_Si, 0, family)
+        self.mdbcontainer_si = mixedDBContainer(self.DC_Si, 0, family)
         self.jset0, self.jset2 = \
             self.pdbcontainer_si.jumpnetwork(0.3, 0.01, 0.01), self.mdbcontainer_si.jumpnetwork(0.3, 0.01, 0.01)
 
@@ -41,7 +35,7 @@ class test_dumbbell_mediated(unittest.TestCase):
         self.W3list = np.random.rand(len(self.onsagercalculator.jnet3))
         self.W4list = np.random.rand(len(self.onsagercalculator.jnet4))
         print(len(self.onsagercalculator.vkinetic.vecpos_bare))
-        print("Initiated")
+        print("Initiated Si")
 
     def test_thermo2kin(self):
         for th_ind, k_ind in enumerate(self.onsagercalculator.thermo2kin):
@@ -472,7 +466,7 @@ class test_dumbbell_mediated(unittest.TestCase):
                         self.assertEqual(j0.state2.iorind, jmp.state2.db.iorind)
                         # self.assertEqual(j0.c1, jmp.c1)
                         # self.assertEqual(j0.c2, jmp.c2)
-                        dx0 = disp(self.onsagercalculator.pdbcontainer, j0.state1, j0.state2)
+                        dx0 = DB_disp(self.onsagercalculator.pdbcontainer, j0.state1, j0.state2)
                         self.assertTrue(np.allclose(dx0, dxdb0))
                         self.assertTrue(np.allclose(dx0, dx))
                         rate01 = rate0list[self.onsagercalculator.om1types[jt]][jnum0]
@@ -1375,6 +1369,36 @@ class test_dumbbell_mediated(unittest.TestCase):
 
         print("passed tests 6 - checking the final bias vector")
 
+class test_BCC(test_dumbbell_mediated):
+    def setUp(self):
+        # We test a new weird lattice because it is more interesting
+
+        latt = np.array([[0., 0.1, 0.5], [0.3, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
+        self.BCC = Crystal.BCC(0.2836, "A")
+        o = np.array([1., 1., 0.]) / np.linalg.norm(np.array([1., 1., 0.])) * 0.1
+        famp0 = [o.copy()]
+        family = [famp0]
+
+        self.pdbcontainer = pureDBContainer(self.BCC, 0, family)
+        self.mdbcontainer = mixedDBContainer(self.BCC, 0, family)
+        self.jset0, self.jset2 = \
+            self.pdbcontainer_si.jumpnetwork(0.3, 0.01, 0.01), self.mdbcontainer.jumpnetwork(0.3, 0.01, 0.01)
+
+        self.onsagercalculator = dumbbellMediated(self.pdbcontainer, self.mdbcontainer_si, self.jset0, self.jset2,
+                                                  0.3, 0.01, 0.01, 0.01, NGFmax=4, Nthermo=1)
+        # generate all the bias expansions - will separate out later
+        self.biases = \
+            self.onsagercalculator.vkinetic.biasexpansion(self.onsagercalculator.jnet1, self.onsagercalculator.jnet2,
+                                                          self.onsagercalculator.om1types,
+                                                          self.onsagercalculator.jnet43)
+
+        self.W1list = np.random.rand(len(self.onsagercalculator.jnet1))
+        self.W2list = np.random.rand(len(self.onsagercalculator.jnet0))
+        self.W3list = np.random.rand(len(self.onsagercalculator.jnet3))
+        self.W4list = np.random.rand(len(self.onsagercalculator.jnet4))
+
+        print(self.onsagercalculator.mdbcontainer.symorlist)
+        print("Initiated distorted lattice")
 
 class test_distorted(test_dumbbell_mediated):
     def setUp(self):
@@ -1387,8 +1411,8 @@ class test_distorted(test_dumbbell_mediated):
         famp0 = [o.copy()]
         family = [famp0]
 
-        self.pdbcontainer_si = dbStates(self.DC_Si, 0, family)
-        self.mdbcontainer_si = mStates(self.DC_Si, 0, family)
+        self.pdbcontainer_si = pureDBContainer(self.DC_Si, 0, family)
+        self.mdbcontainer_si = mixedDBContainer(self.DC_Si, 0, family)
         self.jset0, self.jset2 = \
             self.pdbcontainer_si.jumpnetwork(0.3, 0.01, 0.01), self.mdbcontainer_si.jumpnetwork(0.3, 0.01, 0.01)
 
@@ -1405,6 +1429,8 @@ class test_distorted(test_dumbbell_mediated):
         self.W3list = np.random.rand(len(self.onsagercalculator.jnet3))
         self.W4list = np.random.rand(len(self.onsagercalculator.jnet4))
 
+        print(self.onsagercalculator.mdbcontainer.symorlist)
+        print("Initiated distorted lattice")
 
 class test_2d(test_dumbbell_mediated):
     def setUp(self):
@@ -1415,8 +1441,8 @@ class test_2d(test_dumbbell_mediated):
         famp02d = [o.copy()]
         family = [famp02d]
 
-        self.pdbcontainer_si = dbStates(self.DC_Si, 0, family)
-        self.mdbcontainer_si = mStates(self.DC_Si, 0, family)
+        self.pdbcontainer_si = pureDBContainer(self.DC_Si, 0, family)
+        self.mdbcontainer_si = mixedDBContainer(self.DC_Si, 0, family)
         self.jset0, self.jset2 = \
             self.pdbcontainer_si.jumpnetwork(1.51, 0.01, 0.01), self.mdbcontainer_si.jumpnetwork(1.51, 0.01, 0.01)
 
@@ -1433,3 +1459,4 @@ class test_2d(test_dumbbell_mediated):
         self.W2list = np.random.rand(len(self.onsagercalculator.jnet0))
         self.W3list = np.random.rand(len(self.onsagercalculator.jnet3))
         self.W4list = np.random.rand(len(self.onsagercalculator.jnet4))
+        print("Initiated 2d lattice")
