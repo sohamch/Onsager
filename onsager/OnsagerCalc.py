@@ -2230,7 +2230,7 @@ class dumbbellMediated(VacancyMediated):
         omega0escape = np.zeros((len(self.pdbcontainer.symorlist), len(self.jnet0)))
 
         omega2 = np.zeros(len(self.jnet2))
-        omega2escape = np.zeros((len(self.mdbcontainer.symorlist), len(self.jnet2)))
+        omega2escape = np.zeros((Nvstars_mixed, len(self.jnet2)))
 
         omega1 = np.zeros(len(self.jnet1))
         omega1escape = np.zeros((self.vkinetic.Nvstars_pure, len(self.jnet1)))
@@ -2356,6 +2356,12 @@ class dumbbellMediated(VacancyMediated):
         # Make g2 from omega2 and omega3 (escapes)
         om23 = np.zeros((self.vkinetic.Nvstars - Nvstars_pure, self.vkinetic.Nvstars - Nvstars_pure))
 
+        print("Star Counts : Total - {}, Pure - {}\n".format(self.vkinetic.Nvstars, Nvstars_pure))
+        print("rate2escape : {}".format(rate2escape.shape))
+        print("om2escape : {}".format(omega2escape.shape))
+        print("rate3escape : {}".format(rate3escape.shape))
+        print("om3escape : {}".format(omega3escape.shape))
+
         # off diagonal elements of om23
         om23[:, :] += np.dot(rate2expansion, omega2)
 
@@ -2368,7 +2374,7 @@ class dumbbellMediated(VacancyMediated):
             om23[i, i] += np.dot(rate3escape[i, :], omega3escape[i, :])
 
         # Then invert it
-        GF2 = np.linalg.inv(om23)
+        GF2 = pinvh(om23)
 
         self.GFcalc_pure.SetRates(pre0, bFdb0, pre0T, bFT0)
 
