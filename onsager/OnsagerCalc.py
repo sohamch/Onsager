@@ -2260,8 +2260,8 @@ class dumbbellMediated(VacancyMediated):
             st1 = jlist[0].state1.db
             st2 = jlist[0].state2.db
 
-            w1 = self.vkinetic.starset.mdbcontainer.invmap[self.vkinetic.starset.mdbcontainer.db2ind(st1)]
-            w2 = self.vkinetic.starset.mdbcontainer.invmap[self.vkinetic.starset.mdbcontainer.db2ind(st2)]
+            w1 = self.vkinetic.stateToVecStar_mixed[st1]
+            w2 = self.vkinetic.stateToVecStar_mixed[st2]
 
             omega2escape[w1, jt] = np.exp(-bFT2[jt] + bFdb2[w1])
             omega2escape[w2, jt] = np.exp(-bFT2[jt] + bFdb2[w2])
