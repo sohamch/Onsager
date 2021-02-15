@@ -29,6 +29,7 @@ from onsager import crystal
 from onsager import crystalStars as stars
 from onsager import supercell
 import time
+from scipy.linalg import pinv, pinvh
 
 # database tags
 INTERSTITIAL_TAG = 'i'
@@ -1688,23 +1689,23 @@ class dumbbellMediated(VacancyMediated):
 
         # self.jnet2_indexed = self.kinetic.starset.jnet2_indexed
         print("initializing thermo")
-        self.thermo = stars.StarSet(pdbcontainer, mdbcontainer, (self.jnet0, self.jnet0_indexed),
+        self.thermo = stars.DBStarSet(pdbcontainer, mdbcontainer, (self.jnet0, self.jnet0_indexed),
                                     (self.jnet2, self.jnet2_indexed))
 
         print("initializing kin")
-        self.kinetic = stars.StarSet(pdbcontainer, mdbcontainer, (self.jnet0, self.jnet0_indexed),
+        self.kinetic = stars.DBStarSet(pdbcontainer, mdbcontainer, (self.jnet0, self.jnet0_indexed),
                                      (self.jnet2, self.jnet2_indexed))
 
-        print("initializing NN")
-        start = time.time()
-        # Note - even if empty, our starsets go out to atleast the NNstar - later we'll have to keep this in mind
-        self.NNstar = stars.StarSet(pdbcontainer, mdbcontainer, (self.jnet0, self.jnet0_indexed),
-                                    (self.jnet2, self.jnet2_indexed), 2)
-        print("2NN Shell initialization time: {}\n".format(time.time() - start))
-        self.vkinetic = vector_stars.vectorStars()
+        # print("initializing NN")
+        # start = time.time()
+        # # Note - even if empty, our starsets go out to atleast the NNstar - later we'll have to keep this in mind
+        # self.NNstar = stars.StarSet(pdbcontainer, mdbcontainer, (self.jnet0, self.jnet0_indexed),
+        #                             (self.jnet2, self.jnet2_indexed), 2)
+        # print("2NN Shell initialization time: {}\n".format(time.time() - start))
+        self.vkinetic = stars.DBVectorStars()
 
         # Make GF calculators.
-        self.GFcalc_pure = GF_dumbbells(self.pdbcontainer, self.jnet0_indexed, Nmax=NGFmax, kptwt=None)
+        self.GFcalc_pure = GFcalc.GF_dumbbells(self.pdbcontainer, self.jnet0_indexed, Nmax=NGFmax, kptwt=None)
         # self.GFcalc_mixed = GF_dumbbells(self.mdbcontainer, self.jnet2_indexed, Nmax=4, kptwt=None)
 
         # Generate the initialized crystal and vector stars and the jumpnetworks with the kinetic shell
@@ -2048,17 +2049,17 @@ class dumbbellMediated(VacancyMediated):
     def update_bias_expansions(self, rate0list, omega0escape, rate2list, omega2escape, eta2shift=True):
         self.calc_eta(rate0list, omega0escape, rate2list, omega2escape, eta2shift=eta2shift)
         self.bias_changes(eta2shift=eta2shift)
-        self.bias1_solute_new = zeroclean(self.biases[1][0] + self.delbias1expansion_solute)
-        self.bias1_solvent_new = zeroclean(self.biases[1][1] + self.delbias1expansion_solvent)
+        self.bias1_solute_new = stars.zeroclean(self.biases[1][0] + self.delbias1expansion_solute)
+        self.bias1_solvent_new = stars.zeroclean(self.biases[1][1] + self.delbias1expansion_solvent)
 
-        self.bias3_solute_new = zeroclean(self.biases[3][0] + self.delbias3expansion_solute)
-        self.bias3_solvent_new = zeroclean(self.biases[3][1] + self.delbias3expansion_solvent)
+        self.bias3_solute_new = stars.zeroclean(self.biases[3][0] + self.delbias3expansion_solute)
+        self.bias3_solvent_new = stars.zeroclean(self.biases[3][1] + self.delbias3expansion_solvent)
 
-        self.bias4_solute_new = zeroclean(self.biases[4][0] + self.delbias4expansion_solute)
-        self.bias4_solvent_new = zeroclean(self.biases[4][1] + self.delbias4expansion_solvent)
+        self.bias4_solute_new = stars.zeroclean(self.biases[4][0] + self.delbias4expansion_solute)
+        self.bias4_solvent_new = stars.zeroclean(self.biases[4][1] + self.delbias4expansion_solvent)
 
-        self.bias2_solute_new = zeroclean(self.biases[2][0] + self.delbias2expansion_solute)
-        self.bias2_solvent_new = zeroclean(self.biases[2][1] + self.delbias2expansion_solvent)
+        self.bias2_solute_new = stars.zeroclean(self.biases[2][0] + self.delbias2expansion_solute)
+        self.bias2_solvent_new = stars.zeroclean(self.biases[2][1] + self.delbias2expansion_solvent)
 
     def bareExpansion(self, eta0_solute, eta0_solvent):
         """
@@ -2144,6 +2145,8 @@ class dumbbellMediated(VacancyMediated):
                 D4expansion_aa[:, :, jt] += 0.5 * np.outer(dx_solute, dx_solute)
                 D4expansion_bb[:, :, jt] += 0.5 * np.outer(dx_solvent, dx_solvent)
                 D4expansion_ab[:, :, jt] += 0.5 * np.outer(dx_solute, dx_solvent)
+
+        zeroclean = stars.zeroclean
 
         return zeroclean(D0expansion_bb), \
                (zeroclean(D1expansion_aa), zeroclean(D1expansion_bb), zeroclean(D1expansion_ab)), \
@@ -2395,7 +2398,7 @@ class dumbbellMediated(VacancyMediated):
 
         GF_total = np.dot(np.linalg.inv(np.eye(self.vkinetic.Nvstars) + np.dot(GF02, delta_om)), GF02)
 
-        return zeroclean(GF_total), GF02, delta_om
+        return stars.zeroclean(GF_total), GF02, delta_om
 
     def L_ij(self, bFdb0, bFT0, bFdb2, bFT2, bFS, bFSdb, bFT1, bFT3, bFT4, eta2shift=False):
 
