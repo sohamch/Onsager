@@ -26,8 +26,8 @@ import numpy as np
 import collections, copy, itertools, yaml
 from onsager import crystal
 from onsager.crystal import DB_disp, DB_disp4, pureDBContainer, mixedDBContainer
-from DB_structs import *
-from DB_collisions import *
+from onsager.DB_structs import *
+from onsager.DB_collisions import *
 import itertools
 from collections import defaultdict
 import time
