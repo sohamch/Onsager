@@ -18,11 +18,11 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name = 'onsager',
     packages = ['onsager'],
-    version = '1.3.3',
-    description = 'A package to compute Onsager coefficients for vacancy-mediated diffusion and interstitial elastodiffusion tensors',
+    version = '1.3.3.1',
+    description = 'A package to compute Onsager coefficients for vacancy and dumbbell-mediated diffusion and interstitial elastodiffusion tensors',
     long_description=long_description,
-    author = 'Dallas R. Trinkle',
-    author_email = 'dtrinkle@illinois.edu',
+    author = 'Dallas R. Trinkle, Soham Chattopadhyay',
+    author_email = 'dtrinkle@illinois.edu, sohamc2@illinois.edu',
     license='MIT',  # LICENSE.txt
     url = 'https://github.com/DallasTrinkle/onsager', # use the URL to the github repo
     download_url = 'https://github.com/DallasTrinkle/onsager/tarball/v1.3.3', # for when we upload
