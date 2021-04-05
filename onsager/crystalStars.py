@@ -1845,16 +1845,22 @@ class DBVectorStars(object):
             for IndofState, state in enumerate(crStar):
                 self.stateToVecStar_pure[state].append((IndofStar, IndofState))
 
+        self.stateToVecStar_pure.default_factory = None
+
         self.stateToVecStar_mixed = defaultdict(list)
         for IndOfStar, crStar in enumerate(self.vecpos[self.Nvstars_pure:]):
             for IndOfState, state in enumerate(crStar):
                 self.stateToVecStar_mixed[state].append((IndOfStar + self.Nvstars_pure, IndOfState))
+
+        self.stateToVecStar_mixed.default_factory = None
 
         self.stateToVecStar_bare = defaultdict(list)
         if len(self.vecpos_bare) > 0:
             for IndOfStar, crStar in enumerate(self.vecpos_bare):
                 for IndOfState, state in enumerate(crStar):
                     self.stateToVecStar_bare[state].append((IndOfStar, IndOfState))
+
+        self.stateToVecStar_bare.default_factory = None
 
         # We must produce two expansions. One for pure dumbbell states pointing to pure dumbbell state
         # and the other from mixed dumbbell states to mixed states.
