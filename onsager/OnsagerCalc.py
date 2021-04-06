@@ -1870,7 +1870,10 @@ class dumbbellMediated(VacancyMediated):
 
             # Then, we convert them to cartesian form for each state.
             for st in self.vkinetic.starset.bareStates:
-                indlist = self.vkinetic.stateToVecStar_bare[st]
+                try:
+                    indlist = self.vkinetic.stateToVecStar_bare[st]
+                except:
+                    indlist = []
                 if len(indlist) != 0:
                     self.NlsolventVel_bare[self.vkinetic.starset.bareindexdict[st][0]][:] = \
                         sum([velocity0SolventTotNonLoc[tup[0]] * self.vkinetic.vecvec_bare[tup[0]][tup[1]] for tup in
@@ -2257,8 +2260,8 @@ class dumbbellMediated(VacancyMediated):
 
         # we need omega2 only for the uncorrelated contributions.
         for jt, jlist in enumerate(self.jnet2):
-            st1 = jlist[0].state1
-            st2 = jlist[0].state2
+            st1 = jlist[0].state1 - jlist[0].state1.R_s
+            st2 = jlist[0].state2 - jlist[0].state2.R_s
 
             crStar1 = self.vkinetic.starset.mdbcontainer.invmap[self.vkinetic.starset.mdbcontainer.db2ind(st1.db)]
             crStar2 = self.vkinetic.starset.mdbcontainer.invmap[self.vkinetic.starset.mdbcontainer.db2ind(st2.db)]
@@ -2269,8 +2272,11 @@ class dumbbellMediated(VacancyMediated):
             omega2[jt] = np.sqrt(init2TS * fin2TS)
 
             # get the vector stars
-            v1list = self.vkinetic.stateToVecStar_mixed[st1]
-            v2list = self.vkinetic.stateToVecStar_mixed[st2]
+            try:
+                v1list = self.vkinetic.stateToVecStar_mixed[st1]
+                v2list = self.vkinetic.stateToVecStar_mixed[st2]
+            except KeyError:
+                raise ValueError("Empty vector star for mixed state?")
 
             for (v1, in_v1) in v1list:
                 omega2escape[v1 - self.vkinetic.Nvstars_pure, jt] = init2TS
@@ -2297,8 +2303,11 @@ class dumbbellMediated(VacancyMediated):
             omega1[jt] = np.sqrt(init2TS * fin2TS)
 
             # Get the vector stars where they are located
-            v1list = self.vkinetic.stateToVecStar_pure[st1]
-            v2list = self.vkinetic.stateToVecStar_pure[st2]
+            try:
+                v1list = self.vkinetic.stateToVecStar_pure[st1]
+                v2list = self.vkinetic.stateToVecStar_pure[st2]
+            except:
+                continue
 
             for (v1, in_v1) in v1list:
                 omega1escape[v1, jt] = init2TS
@@ -2312,7 +2321,7 @@ class dumbbellMediated(VacancyMediated):
             # The first state is a complex state, the second state is a mixed state.
             # This has been checked in test_crystal stars - look it up
             st1 = jlist[0].state1
-            st2 = jlist[0].state2
+            st2 = jlist[0].state2 - jlist[0].state2.R_s
             # If the solutes are not already at the origin, there is some error and it will show up
             # while getting the crystal stars.
 
@@ -2329,8 +2338,11 @@ class dumbbellMediated(VacancyMediated):
             omega3[jt] = omega4[jt]  # symmetry condition : = np.sqrt(fin2ts * init2Ts)
 
             # get the vector stars
-            v1list = self.vkinetic.stateToVecStar_pure[st1]
-            v2list = self.vkinetic.stateToVecStar_mixed[st2]
+            try:
+                v1list = self.vkinetic.stateToVecStar_pure[st1]
+                v2list = self.vkinetic.stateToVecStar_mixed[st2]
+            except:
+                continue
 
             for (v1, in_v1) in v1list:
                 omega4escape[v1, jt] = init2TS
