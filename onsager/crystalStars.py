@@ -2145,10 +2145,13 @@ class DBVectorStars(object):
                 # Get the vector star indices for the initial and final states of the jumps
                 try:
                     indlist1 = self.stateToVecStar_pure[jmp.state1]
-                    indlist2 = self.stateToVecStar_pure[jmp.state2]
-                    # indlists contain tuples of the form (IndOfVstar, IndInVstar)
                 except KeyError:
                     continue
+                try:
+                    indlist2 = self.stateToVecStar_pure[jmp.state2]
+                except KeyError:
+                    indlist2 = []
+
                 for tup1 in indlist1:
                     # print(tup1)
                     rate0escape[tup1[0], jt] -= np.dot(self.vecvec[tup1[0]][tup1[1]], self.vecvec[tup1[0]][tup1[1]])
@@ -2172,7 +2175,7 @@ class DBVectorStars(object):
                     indlist1 = self.stateToVecStar_pure[jmp.state1]  # The initial state is a complex in omega4
                     indlist2 = self.stateToVecStar_mixed[jmp.state2]  # The final state is a mixed dumbbell in omega4
                 except KeyError:
-                    continue
+                    raise ValueError("Empty vector stars for omega43 jumps?")
                 for tup1 in indlist1:
                     rate4escape[tup1[0], k] -= np.dot(self.vecvec[tup1[0]][tup1[1]], self.vecvec[tup1[0]][tup1[1]])
                 for tup2 in indlist2:
@@ -2199,7 +2202,7 @@ class DBVectorStars(object):
                     indlist1 = self.stateToVecStar_mixed[jmp.state1]
                     indlist2 = self.stateToVecStar_mixed[jmp.state2 - jmp.state2.R_s]
                 except KeyError:
-                    continue
+                    raise ValueError("Empty vector stars for omega2 jumps?")
                 for tup1 in indlist1:
                     rate2escape[tup1[0] - self.Nvstars_pure, k] -= np.dot(self.vecvec[tup1[0]][tup1[1]],
                                                                           self.vecvec[tup1[0]][tup1[1]])
