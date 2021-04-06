@@ -1960,9 +1960,12 @@ class DBVectorStars(object):
         start = time.time()
         for ((st1, st2), s) in self.connect_ComplexPair.items():
             # get the vector stars in which the initial state belongs
-            i = self.stateToVecStar_pure[st1]
-            # get the vector stars in which the final state belongs
-            j = self.stateToVecStar_pure[st2]
+            try:
+                i = self.stateToVecStar_pure[st1]
+                # get the vector stars in which the final state belongs
+                j = self.stateToVecStar_pure[st2]
+            except KeyError:
+                continue
             k = GFPureStarInd[s]
             for (indOfStar_i, indOfState_i) in i:
                 for (indOfStar_j, indOfState_j) in j:
@@ -2140,9 +2143,12 @@ class DBVectorStars(object):
         for k, jumplist, jt in zip(itertools.count(), jumpnetwork_omega1, jumptype):
             for jmp in jumplist:
                 # Get the vector star indices for the initial and final states of the jumps
-                indlist1 = self.stateToVecStar_pure[jmp.state1]
-                indlist2 = self.stateToVecStar_pure[jmp.state2]
-                # indlists contain tuples of the form (IndOfVstar, IndInVstar)
+                try:
+                    indlist1 = self.stateToVecStar_pure[jmp.state1]
+                    indlist2 = self.stateToVecStar_pure[jmp.state2]
+                    # indlists contain tuples of the form (IndOfVstar, IndInVstar)
+                except KeyError:
+                    continue
                 for tup1 in indlist1:
                     # print(tup1)
                     rate0escape[tup1[0], jt] -= np.dot(self.vecvec[tup1[0]][tup1[1]], self.vecvec[tup1[0]][tup1[1]])
@@ -2162,10 +2168,11 @@ class DBVectorStars(object):
 
         for k, jumplist in enumerate(jumpnetwork_omega34):
             for jmp in jumplist[::2]:  # iterate only through the omega4 jumps, the negatives are omega3
-
-                indlist1 = self.stateToVecStar_pure[jmp.state1]  # The initial state is a complex in omega4
-                indlist2 = self.stateToVecStar_mixed[jmp.state2]  # The final state is a mixed dumbbell in omega4
-
+                try:
+                    indlist1 = self.stateToVecStar_pure[jmp.state1]  # The initial state is a complex in omega4
+                    indlist2 = self.stateToVecStar_mixed[jmp.state2]  # The final state is a mixed dumbbell in omega4
+                except KeyError:
+                    continue
                 for tup1 in indlist1:
                     rate4escape[tup1[0], k] -= np.dot(self.vecvec[tup1[0]][tup1[1]], self.vecvec[tup1[0]][tup1[1]])
                 for tup2 in indlist2:
@@ -2188,10 +2195,11 @@ class DBVectorStars(object):
 
         for k, jumplist in zip(itertools.count(), self.starset.jnet2):
             for jmp in jumplist:
-
-                indlist1 = self.stateToVecStar_mixed[jmp.state1]
-                indlist2 = self.stateToVecStar_mixed[jmp.state2 - jmp.state2.R_s]
-
+                try:
+                    indlist1 = self.stateToVecStar_mixed[jmp.state1]
+                    indlist2 = self.stateToVecStar_mixed[jmp.state2 - jmp.state2.R_s]
+                except KeyError:
+                    continue
                 for tup1 in indlist1:
                     rate2escape[tup1[0] - self.Nvstars_pure, k] -= np.dot(self.vecvec[tup1[0]][tup1[1]],
                                                                           self.vecvec[tup1[0]][tup1[1]])
@@ -2215,7 +2223,10 @@ class DBVectorStars(object):
         outerprod = np.zeros((self.crys.dim, self.crys.dim, self.Nvstars, self.Nvstars))
 
         for st in self.starset.complexStates:
-            vecStarList = self.stateToVecStar_pure[st]
+            try:
+                vecStarList = self.stateToVecStar_pure[st]
+            except KeyError:
+                continue
             for (indStar1, indState1) in vecStarList:
                 for (indStar2, indState2) in vecStarList:
                     outerprod[:, :, indStar1, indStar2] += np.outer(self.vecvec[indStar1][indState1],
@@ -2224,7 +2235,11 @@ class DBVectorStars(object):
         # There should be no non-zero outer product tensors between the pure and mixed dumbbells.
 
         for st in self.starset.mixedstates:
-            indlist = self.stateToVecStar_mixed[st]
+            try:
+                indlist = self.stateToVecStar_mixed[st]
+            except KeyError:
+                raise ValueError("Empty vector star for mixed state?")
+
             for (IndofStar1, IndofState1) in indlist:
                 for (IndofStar2, IndofState2) in indlist:
                     outerprod[:, :, IndofStar1, IndofStar2] += np.outer(self.vecvec[IndofStar1][IndofState1],
