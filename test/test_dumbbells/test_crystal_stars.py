@@ -8,6 +8,8 @@ from onsager.DB_structs import dumbbell, SdPair, jump, connector
 import unittest
 import collections
 
+# class test_DB_structs(unittest.TestCase):
+
 
 class test_StarSet(unittest.TestCase):
 
@@ -21,24 +23,35 @@ class test_StarSet(unittest.TestCase):
         self.crys_stars = DBStarSet(self.pdbcontainer, self.mdbcontainer, jset0, jset2, 2)
 
     def test_generate(self):
-        # test if the starset is generated correctly
-        tot_st = 0
-        for l in (self.crys_stars.stars[:self.crys_stars.mixedstartindex]):
-            tot_st += len(l)
-        self.assertEqual(tot_st, len(self.crys_stars.stateset))
 
-        o = np.array([1., 0., 0.]) / np.linalg.norm(np.array([1., 0., 0.])) * 0.126
-        dbInd = self.pdbcontainer.getIndex((0, o))
-        db = dumbbell(dbInd, np.array([1, 0, 0], dtype=int))
-        pair_test = SdPair(0, np.zeros(3, dtype=int), db)
-        idxlist = []
-        for idx, l in enumerate(self.crys_stars.stars):
-            for state in l:
-                if state == pair_test:
-                    idxlist.append(idx)
-        self.assertEqual(len(idxlist), 1)
-        self.assertEqual(len(self.crys_stars.stars[idxlist[0]]), 6)
+        def test_crystal(crys_stars):
+            pdbcontainer = crys_stars.pdbcontainer
+            # check that starset is closed under symmetry
+            for st in crys_stars.stateset:
+                for gdumb in pdbcontainer.G:
+                    stnew, flipind = st.gop(pdbcontainer, gdumb)
+                    stnew -= stnew.R_s
+                    self.assertTrue(stnew in crys_stars.stateset)
 
+            # Check that the stars are properly generated
+            count_origin_states = 0
+            for star in crys_stars.stars[:crys_stars.mixedstartindex]:
+                repr = star[0]
+                if repr.is_zero(crys_stars.pdbcontainer):
+                    count_origin_states += len(star)
+                considered_already = set([])
+                count = 0
+                for gdumb in crys_stars.pdbcontainer.G:
+                    stnew = repr.gop(crys_stars.pdbcontainer, gdumb)[0]
+                    stnew -= stnew.R_s
+                    if stnew in star and not stnew in considered_already:
+                        count += 1
+                        considered_already.add(stnew)
+                self.assertEqual(count, len(star))
+
+            return count_origin_states
+
+        print("Testing DC")
         latt = np.array([[0., 0.5, 0.5], [0.5, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
         DC_Si = crystal.Crystal(latt, [[np.array([0., 0., 0.]), np.array([0.25, 0.25, 0.25])]], ["Si"])
         famp0 = [np.array([1., 0., 0.]) * 0.145]
@@ -49,51 +62,62 @@ class test_StarSet(unittest.TestCase):
         jset2 = mdbcontainer.jumpnetwork(0.3, 0.01, 0.01)
         crys_stars = DBStarSet(pdbcontainer, mdbcontainer, jset0, jset2, 1)
 
-        # check that starset is closed under symmetry
-        for st in crys_stars.stateset:
-            for gdumb in pdbcontainer.G:
-                stnew, flipind = st.gop(pdbcontainer, gdumb)
-                stnew -= stnew.R_s
-                self.assertTrue(stnew in crys_stars.stateset)
-
-        # Check that the stars are properly generated
-        count_origin_states = 0
-        for star in crys_stars.stars[:crys_stars.mixedstartindex]:
-            repr = star[0]
-            if repr.is_zero(crys_stars.pdbcontainer):
-                count_origin_states += len(star)
-            considered_already = set([])
-            count = 0
-            for gdumb in crys_stars.pdbcontainer.G:
-                stnew = repr.gop(crys_stars.pdbcontainer, gdumb)[0]
-                stnew -= stnew.R_s
-                if stnew in star and not stnew in considered_already:
-                    count += 1
-                    considered_already.add(stnew)
-            self.assertEqual(count, len(star))
+        count_origin_states = test_crystal(crys_stars)
 
         # Check that we have origin states
         self.assertTrue(count_origin_states, 6)
 
+        # Put in 2d rectangular lattice test
+        print("Testing 2d - 110 rigid mechanism BCC.")
+        crys2d = crystal.Crystal(np.array([[1., 0.], [0., 1.5]]), [[np.array([0, 0]), np.array([0.5, 0.5])]], ["A"])
+        o = np.array([0.1, 0.])
+        famp02d = [o.copy()]
+        family2d = [famp02d]
+        pdbcontainer2d = pureDBContainer(crys2d, 0, family2d)
+        mdbcontainer2d = mixedDBContainer(crys2d, 0, family2d)
+
+        jset02d, jset22d = pdbcontainer2d.jumpnetwork(0.91, 0.01, 0.01), mdbcontainer2d.jumpnetwork(0.91, 0.01, 0.01)
+
+        crys_stars = DBStarSet(pdbcontainer2d, mdbcontainer2d, jset02d, jset22d, Nshells=1)
+        self.assertEqual(len(crys_stars.stateset), 4 + 1) # 1 origin state
+        count_origin_states = test_crystal(crys_stars)
+        self.assertTrue(count_origin_states, 1)
+
+
+        # put in BCC test
+        print("Testing BCC")
+        BCC = crystal.Crystal.BCC(a0=1.0, chemistry="A")
+        famp0 = [np.array([1., 1., 0.]) * 0.1]
+        family = [famp0]
+        pdbcontainer = pureDBContainer(BCC, 0, family)
+        mdbcontainer = mixedDBContainer(BCC, 0, family)
+        jset0 = pdbcontainer.jumpnetwork(1.01 * np.sqrt(3)/2, 0.01, 0.01)
+        jset2 = mdbcontainer.jumpnetwork(1.01 * np.sqrt(3)/2, 0.01, 0.01)
+        crys_stars = DBStarSet(pdbcontainer, mdbcontainer, jset0, jset2, 1)
+
+        # for BCC 1nn shell we can count explicitly - 6*8 = 48, + 6 origin states
+        self.assertEqual(len(crys_stars.stateset), 48 + 6)
+
+        count_origin_states = test_crystal(crys_stars)
+
         # put in FCC test
-        latt = np.array([[0., 0.5, 0.5], [0.5, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
-        FCC = crystal.Crystal(latt, [[np.array([0., 0., 0.])]], ["A"])
-        famp0 = [np.array([1., 0., 0.]) * 0.145]
+        print("Testing FCC")
+        FCC = crystal.Crystal.FCC(a0=1.0, chemistry="A")
+        famp0 = [np.array([1., 0., 0.]) * 0.1]
         family = [famp0]
         pdbcontainer = pureDBContainer(FCC, 0, family)
         mdbcontainer = mixedDBContainer(FCC, 0, family)
-        jset0 = pdbcontainer.jumpnetwork(0.4, 0.01, 0.01)
-        jset2 = mdbcontainer.jumpnetwork(0.4, 0.01, 0.01)
+        jset0 = pdbcontainer.jumpnetwork(1.01 / np.sqrt(2), 0.01, 0.01)
+        jset2 = mdbcontainer.jumpnetwork(1.01 / np.sqrt(2), 0.01, 0.01)
         crys_stars = DBStarSet(pdbcontainer, mdbcontainer, jset0, jset2, 1)
 
-        # check that starset is closed under symmetry
-        for st in crys_stars.stateset:
-            for gdumb in pdbcontainer.G:
-                stnew, flipind = st.gop(pdbcontainer, gdumb)
-                stnew -= stnew.R_s
-                self.assertTrue(stnew in crys_stars.stateset)
-        # for fcc 1nn shell we can count explicitly - 3*12 = 36 + 3 origin states
+        # for fcc 1nn shell we can count explicitly - 3*12 = 36, + 3 origin states
         self.assertEqual(len(crys_stars.stateset), 39)
+
+        count_origin_states = test_crystal(crys_stars)
+
+        # Check that we have origin states
+        self.assertTrue(count_origin_states, 3)
 
         # Now let's do a 1nn2 shell
         crys_stars = DBStarSet(pdbcontainer, mdbcontainer, jset0, jset2, 2)
@@ -133,8 +157,8 @@ class test_StarSet(unittest.TestCase):
         jset2 = mdbcontainer2.jumpnetwork(0.3, 0.01, 0.01)
         crys_stars2 = DBStarSet(pdbcontainer2, mdbcontainer2, jset0, jset2, 1)
 
+        # Add 2d test
         crys2d = crystal.Crystal(np.array([[1., 0.], [0., 1.5]]), [[np.array([0, 0]), np.array([0.5, 0.5])]], ["A"])
-
         o = np.array([0.1, 0.])
         famp02d = [o.copy()]
         family2d = [famp02d]
