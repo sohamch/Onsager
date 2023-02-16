@@ -1365,7 +1365,7 @@ class DBStarSet(object):
 
         print("built mixed dumbbell stars: {}".format(time.time() - start))
 
-        # Next, we build up the jtags for omega2 (see Onsager_calc_db module).
+        # Next, we build up the jtags for omega2 (see Onsager_calc module).
         start = time.time()
         j2initlist = []
         for jt, jlist in enumerate(self.jnet2_ind):
