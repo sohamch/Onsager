@@ -101,6 +101,7 @@ class test_dumbbell_mediated(unittest.TestCase):
             self.assertTrue(np.allclose(self.onsagercalculator.eta00_solvent,
                                         np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates),
                                                   self.onsagercalculator.crys.dim))))
+            print("Invertible lattice, zero vectors.")
 
         else:
             # Here, we check if for periodic dumbbells, we have the same non- local solvent velocity vector.
@@ -124,6 +125,7 @@ class test_dumbbell_mediated(unittest.TestCase):
 
             # The above test confirms that our NlsolventVel_bare is correct
             # Now we check if the eta vectors are true
+            vMags_solvent = []
             for i, dbstate in enumerate(self.onsagercalculator.vkinetic.starset.bareStates):
 
                 vel_test = np.zeros(3)
@@ -142,8 +144,11 @@ class test_dumbbell_mediated(unittest.TestCase):
                             self.assertTrue(dbstate == jmp.state1)
                             vel_test += rate0list[jt][jnum] * (self.onsagercalculator.eta00_solvent_bare[FS, :] -
                                                                 self.onsagercalculator.eta00_solvent_bare[IS, :])
-                self.assertTrue(np.allclose(vel_test, vel_calc), msg="{}{}".format(vel_test, vel_calc))
 
+                self.assertTrue(np.allclose(vel_test, vel_calc), msg="{}{}".format(vel_test, vel_calc))
+                vMags_solvent.append(np.max(np.abs(vel_test)))
+
+            print("max pure state solvent component: {}".format(max(vMags_solvent)))
             # A small test to reaffirm that vector bases are calculated properly for the bare states.
             for i in range(len(self.onsagercalculator.vkinetic.starset.bareStates)):
                 # get the indices of the state
@@ -195,6 +200,8 @@ class test_dumbbell_mediated(unittest.TestCase):
                             msg="\n{}\n{}\n{}".format(i, vel_true_solute, vel_calc_solute))
 
         # Now we check if the eta vectors are true
+        vNorms_solute = []
+        vNorms_solvent = []
         for i, state in enumerate(self.onsagercalculator.vkinetic.starset.mixedstates):
 
             vel_test_solute = np.zeros(self.onsagercalculator.crys.dim)
@@ -220,6 +227,11 @@ class test_dumbbell_mediated(unittest.TestCase):
                                                                                              vel_calc_solute))
             self.assertTrue(np.allclose(vel_test_solvent, vel_calc_solvent), msg="{}{}".format(vel_test_solvent,
                                                                                                vel_calc_solvent))
+
+            vNorms_solute.append(np.max(np.abs(vel_test_solute)))
+            vNorms_solvent.append(np.max(np.abs(vel_test_solvent)))
+        print("max mixed state solute component: {}".format(max(vNorms_solute)))
+        print("max mixed state solvent component: {}".format(max(vNorms_solvent)))
 
     def test_bias_updates(self):
         """
