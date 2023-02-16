@@ -1638,7 +1638,7 @@ def symmratelist(jumpnetwork, pre, betaene, preT, betaeneT, invmap):
             for t, pT, beT in zip(jumpnetwork, preT, betaeneT)]
 
 
-class dumbbellMediated(VacancyMediated):
+class dumbbellMediated():
     """
     class to compute dumbbell mediated solute transport coefficients. We inherit the calculator
     for vacancies from Prof. Trinkle's code for vacancies with changes as and when required.
