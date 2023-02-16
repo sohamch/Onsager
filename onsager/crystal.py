@@ -1772,6 +1772,9 @@ class pureDBContainer(object):
         iorlist = []
         for wyckind, wycksites in enumerate(sitelist):
             orlist = self.family[wyckind]  # Get the orientations allowed on the given Wyckoff set.
+            for ov in orlist:
+                ov[np.abs(ov) < 1e-10] = 0.0 # set small values to zero
+
             if np.allclose(orlist[0], np.zeros(self.crys.dim)):
                 # If zero vector is entered, then that means this set does not have dumbbells.
                 continue
@@ -1781,9 +1784,11 @@ class pureDBContainer(object):
                 for g in self.crys.G:
                     R, (ch, i_new) = self.crys.g_pos(g, np.zeros(self.crys.dim), (self.chem, site))
                     o_new = self.crys.g_direc(g, o)
+                    o_new[np.abs(o_new) < 1e-10] = 0.0
+
                     if not (inlist((i_new, o_new), iorlist) or inlist((i_new, -o_new), iorlist)):
                         if negOrInList(o_new, iorlist):
-                            o_new = -o_new + 0.
+                            o_new = -o_new + 0.0
                         iorlist.append((i_new, o_new))
         return iorlist
 
@@ -1800,6 +1805,7 @@ class pureDBContainer(object):
                 # Need the elements of indexmap
                 R, (ch, i_new) = crys.g_pos(g, np.zeros(self.crys.dim), (chem, i))
                 o_new = crys.g_direc(g, o)
+                o_new[np.abs(o_new) < 1e-10] = 0.
 
                 for idx2, (i2, o2) in enumerate(iorlist):
                     if i2 == i_new and (np.allclose(o2, o_new, atol=crys.threshold) or
@@ -2034,9 +2040,11 @@ class mixedDBContainer(pureDBContainer):
             site = wycksites[0]
             newlist = []
             for o in orlist:
+                o[np.abs(o < 1e-10)] = 0.0
                 for g in crys.G:
                     R, (ch, i_new) = crys.g_pos(g, np.zeros(self.crys.dim), (chem, site))
                     o_new = crys.g_direc(g, o)
+                    o_new[np.abs(o_new) < 1e-10] = 0.0
                     if not inlist((i_new, o_new), pairlist):
                         pairlist.append((i_new, o_new))
         return pairlist
@@ -2054,6 +2062,7 @@ class mixedDBContainer(pureDBContainer):
                 # Need the elements of indexmap
                 R, (ch, i_new) = crys.g_pos(g, np.zeros(self.crys.dim), (chem, i))
                 o_new = crys.g_direc(g, o)
+                o_new[np.abs(o_new) < 1e-10] = 0.0
                 for idx2, (i2, o2) in enumerate(iorlist):
                     if i2 == i_new and np.allclose(o2, o_new, atol=crys.threshold):
                         indexmap.append(idx2)
