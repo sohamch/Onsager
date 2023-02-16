@@ -24,14 +24,36 @@ class test_StarSet(unittest.TestCase):
 
     def test_generate(self):
 
-        def test_crystal(crys_stars):
+        def test_crystalStar(crys_stars):
             pdbcontainer = crys_stars.pdbcontainer
-            # check that starset is closed under symmetry
-            for st in crys_stars.stateset:
+            Zint = np.zeros(crys_stars.pdbcontainer.crys.dim, dtype=int)
+            # check the bare states
+            self.assertEqual(len(crys_stars.barePeriodicStars), len(crys_stars.pdbcontainer.symorlist))
+            for starInd, star in enumerate(crys_stars.barePeriodicStars):
+                repr = star[0]
+                self.assertTrue(np.array_equal(repr.R, Zint), msg="{} != {}".format(repr.R, Zint))
+                for gdumb in crys_stars.pdbcontainer.G:
+                    stnew = repr.gop(crys_stars.pdbcontainer, gdumb)[0]
+                    stnew -= stnew.R
+                    self.assertTrue(stnew in star, msg="{}".format(crys_stars.pdbcontainer.iorlist))
+
+                self.assertEqual(len(star), len(crys_stars.pdbcontainer.symorlist[starInd]))
+                for stInd, st in enumerate(star):
+                    self.assertTrue(np.array_equal(st.R, Zint))
+                    iorInd = st.iorind
+                    i, o = crys_stars.pdbcontainer.iorlist[iorInd]
+                    i_container, o_container = crys_stars.pdbcontainer.symorlist[starInd][stInd]
+                    self.assertEqual(i_container, i)
+                    self.assertTrue(np.array_equal(o_container, o))
+
+
+            # check that complex state starset is closed under symmetry
+            self.assertTrue(crys_stars.complexStates, crys_stars.stateset)
+            for st in crys_stars.complexStates:
                 for gdumb in pdbcontainer.G:
                     stnew, flipind = st.gop(pdbcontainer, gdumb)
                     stnew -= stnew.R_s
-                    self.assertTrue(stnew in crys_stars.stateset)
+                    self.assertTrue(stnew in crys_stars.complexStates)
 
             # Check that the stars are properly generated
             count_origin_states = 0
@@ -40,14 +62,33 @@ class test_StarSet(unittest.TestCase):
                 if repr.is_zero(crys_stars.pdbcontainer):
                     count_origin_states += len(star)
                 considered_already = set([])
-                count = 0
+
                 for gdumb in crys_stars.pdbcontainer.G:
                     stnew = repr.gop(crys_stars.pdbcontainer, gdumb)[0]
                     stnew -= stnew.R_s
-                    if stnew in star and not stnew in considered_already:
-                        count += 1
-                        considered_already.add(stnew)
-                self.assertEqual(count, len(star))
+                    self.assertTrue(stnew in star)
+                    self.assertTrue(stnew in crys_stars.complexStates)
+                    considered_already.add(stnew)
+
+                self.assertEqual(len(considered_already), len(star))
+                self.assertEqual(considered_already, set(star))
+
+            # Now check the mixed states
+            for star in crys_stars.stars[crys_stars.mixedstartindex:]:
+                repr = star[0]
+                considered_already = set([])
+                for gdumb in crys_stars.mdbcontainer.G:
+                    stnew = repr.gop(crys_stars.mdbcontainer, gdumb, complex=False)
+                    stnew -= stnew.R_s
+                    self.assertTrue(np.array_equal(stnew.R_s, stnew.db.R))
+                    # check that dumbbell and solute are in the same place
+                    self.assertTrue(np.array_equal(stnew.i_s, crys_stars.mdbcontainer.iorlist[stnew.db.iorind][0]))
+                    self.assertTrue(stnew in star)
+                    self.assertTrue(stnew in crys_stars.mixedstates)
+                    considered_already.add(stnew)
+
+                self.assertEqual(len(considered_already), len(star))
+                self.assertEqual(considered_already, set(star))
 
             return count_origin_states
 
@@ -61,8 +102,8 @@ class test_StarSet(unittest.TestCase):
         jset0 = pdbcontainer.jumpnetwork(0.3, 0.01, 0.01)
         jset2 = mdbcontainer.jumpnetwork(0.3, 0.01, 0.01)
         crys_stars = DBStarSet(pdbcontainer, mdbcontainer, jset0, jset2, 1)
-
-        count_origin_states = test_crystal(crys_stars)
+        print(crys_stars.pdbcontainer.iorlist)
+        count_origin_states = test_crystalStar(crys_stars)
 
         # Check that we have origin states
         self.assertTrue(count_origin_states, 6)
@@ -79,8 +120,9 @@ class test_StarSet(unittest.TestCase):
         jset02d, jset22d = pdbcontainer2d.jumpnetwork(0.91, 0.01, 0.01), mdbcontainer2d.jumpnetwork(0.91, 0.01, 0.01)
 
         crys_stars = DBStarSet(pdbcontainer2d, mdbcontainer2d, jset02d, jset22d, Nshells=1)
-        self.assertEqual(len(crys_stars.stateset), 4 + 1) # 1 origin state
-        count_origin_states = test_crystal(crys_stars)
+        self.assertEqual(len(crys_stars.complexStates), 4 + 1, msg="{}".format(crys_stars.pdbcontainer.iorlist)) # 1 origin state
+        self.assertEqual(len(crys_stars.mixedstates), 2)
+        count_origin_states = test_crystalStar(crys_stars)
         self.assertTrue(count_origin_states, 1)
 
 
@@ -96,9 +138,22 @@ class test_StarSet(unittest.TestCase):
         crys_stars = DBStarSet(pdbcontainer, mdbcontainer, jset0, jset2, 1)
 
         # for BCC 1nn shell we can count explicitly - 6*8 = 48, + 6 origin states
-        self.assertEqual(len(crys_stars.stateset), 48 + 6)
+        self.assertEqual(len(crys_stars.complexStates), 48 + 6)
+        self.assertEqual(len(crys_stars.mixedstates), 12) # mixed states only at R=0
 
-        count_origin_states = test_crystal(crys_stars)
+        count_origin_states = test_crystalStar(crys_stars)
+        self.assertTrue(count_origin_states, 3)
+        # Now let's do a 1nn2 shell
+        crys_stars = DBStarSet(pdbcontainer, mdbcontainer, jset0, jset2, 2)
+        count_origin_states = test_crystalStar(crys_stars)
+
+        Rcounts = collections.defaultdict(int)
+        for state in crys_stars.stateset:
+            R = state.db.R
+            Rcounts[(R[0], R[1], R[2])] += 1
+
+        for (key, val) in Rcounts.items():
+            self.assertEqual(val, 6)  # check that all 6 orientations are present at every R
 
         # put in FCC test
         print("Testing FCC")
@@ -112,22 +167,16 @@ class test_StarSet(unittest.TestCase):
         crys_stars = DBStarSet(pdbcontainer, mdbcontainer, jset0, jset2, 1)
 
         # for fcc 1nn shell we can count explicitly - 3*12 = 36, + 3 origin states
-        self.assertEqual(len(crys_stars.stateset), 39)
+        self.assertEqual(len(crys_stars.complexStates), 39)
+        self.assertEqual(len(crys_stars.mixedstates), 6)
 
-        count_origin_states = test_crystal(crys_stars)
+        count_origin_states = test_crystalStar(crys_stars)
 
         # Check that we have origin states
         self.assertTrue(count_origin_states, 3)
-
         # Now let's do a 1nn2 shell
         crys_stars = DBStarSet(pdbcontainer, mdbcontainer, jset0, jset2, 2)
-
-        # check that starset is closed under symmetry
-        for st in crys_stars.stateset:
-            for gdumb in pdbcontainer.G:
-                stnew, flipind = st.gop(pdbcontainer, gdumb)
-                stnew -= stnew.R_s
-                self.assertTrue(stnew in crys_stars.stateset)
+        count_origin_states = test_crystalStar(crys_stars)
 
         Rcounts = collections.defaultdict(int)
         for state in crys_stars.stateset:
@@ -175,14 +224,13 @@ class test_StarSet(unittest.TestCase):
             for star in crys_stars.stars[:crys_stars.mixedstartindex]:
                 repr = star[0]
                 considered_already = set([])
-                count = 0
                 for gdumb in crys_stars.pdbcontainer.G:
                     stnew = repr.gop(crys_stars.pdbcontainer, gdumb)[0]
                     stnew -= stnew.R_s
-                    if stnew in star and not stnew in considered_already:
-                        count += 1
-                        considered_already.add(stnew)
-                self.assertEqual(count, len(star))
+                    self.assertTrue(stnew in star)
+                    considered_already.add(stnew)
+
+                self.assertEqual(len(considered_already), len(star))
 
             # test indexing
             for star, starind in zip(crys_stars.stars[:crys_stars.mixedstartindex],
@@ -195,6 +243,11 @@ class test_StarSet(unittest.TestCase):
                                      crys_stars.starindexed[crys_stars.mixedstartindex:]):
                 for state, stateind in zip(star, starind):
                     self.assertEqual(state, crys_stars.mixedstates[stateind])
+
+            for star, starind in zip(crys_stars.barePeriodicStars,
+                                     crys_stars.bareStarindexed):
+                for state, stateind in zip(star, starind):
+                    self.assertEqual(state.iorind, stateind)
 
     def test_dicts(self):
         hcp_Mg = crystal.Crystal.HCP(0.3294, chemistry=["Mg"])
@@ -238,6 +291,11 @@ class test_StarSet(unittest.TestCase):
             for key, value in crys_stars.mixedindexdict.items():
                 self.assertEqual(key, crys_stars.mixedstates[value[0]])
                 self.assertTrue(crys_stars.mixedstates[value[0]] in crys_stars.stars[value[1]])
+
+            # Next, the bare dictionary
+            for key, value in crys_stars.bareindexdict.items():
+                self.assertEqual(key.iorind, value[0])
+                self.assertTrue(value[0] in crys_stars.pdbcontainer.symIndlist[value[1]])
 
             # Now test star2symlist
             for starind, star in enumerate(crys_stars.stars[:crys_stars.mixedstartindex]):
