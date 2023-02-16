@@ -1793,8 +1793,7 @@ class DBVectorStars(object):
             scale = 1. / np.sqrt(len(star))
             vlist = [v * scale for v in vlist]
             Nvect = len(vlist)
-            if Nvect > 0:  # why did I put this? Makes sense to expand only if Nvects >0, otherwise there is zero bias.
-                # verify this
+            if Nvect > 0:
                 for v in vlist:
                     self.vecpos.append(star)
                     self.vecpos_indexed.append(indstar)
