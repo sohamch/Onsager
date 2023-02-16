@@ -1,5 +1,5 @@
 import numpy as np
-from onsager.crystal import dumbbell, SdPair, jump
+from onsager.DB_structs import dumbbell, SdPair, jump
 from crysts import *
 import itertools
 import unittest
