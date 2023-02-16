@@ -159,13 +159,15 @@ class SdPair(namedtuple('SdPair', "i_s R_s db")):
 
 # Jump obects are rather simple, contain just initial and final orientations
 # dumbell/pair objects are not aware of jump objects.
-
-class jump(namedtuple('jump', 'state1 state2 c1 c2')):
-
-    def __init__(self, state1, state2, c1, c2):
+X = namedtuple('jump', 'state1 state2 c1 c2')
+class jump(X):
+    def __new__(cls, state1, state2, c1, c2):
+        self = super(jump, cls).__new__(cls, state1, state2, c1, c2)
         # Do Type checking of input stateects
         if not isinstance(self.state2, self.state1.__class__):
             raise TypeError("Incompatible Initial and final states. They must be of the same type.")
+
+        return self
 
     def __eq__(self, other):
         return (self.state1 == other.state1 and self.state2 == other.state2 and
