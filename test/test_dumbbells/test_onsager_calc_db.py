@@ -149,6 +149,7 @@ class test_dumbbell_mediated(unittest.TestCase):
                 vMags_solvent.append(np.max(np.abs(vel_test)))
 
             print("max pure state solvent component: {}".format(max(vMags_solvent)))
+
             # A small test to reaffirm that vector bases are calculated properly for the bare states.
             for i in range(len(self.onsagercalculator.vkinetic.starset.bareStates)):
                 # get the indices of the state
@@ -1440,6 +1441,7 @@ class test_distorted(test_dumbbell_mediated):
         self.W4list = np.random.rand(len(self.onsagercalculator.jnet4))
 
         print(self.onsagercalculator.mdbcontainer.symorlist)
+        print("Jump types of 1, 2, 3, 4: ", len(self.W1list), len(self.W2list), len(self.W3list), len(self.W4list))
         print("Initiated distorted lattice")
 
 class test_2d(test_dumbbell_mediated):
