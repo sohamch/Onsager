@@ -13,7 +13,7 @@ class dumbbell(namedtuple('dumbbell', 'iorind R')):
     def __eq__(self, other):
         # zero=np.zeros(len(self.o))
         true_class = isinstance(other, self.__class__)
-        c1 = true_class and (self.iorind == other.iorind and np.allclose(self.R, other.R, atol=1e-8))
+        c1 = true_class and (self.iorind == other.iorind and np.array_equal(self.R, other.R))
         return c1
 
     def __ne__(self, other):
@@ -159,8 +159,8 @@ class SdPair(namedtuple('SdPair', "i_s R_s db")):
 
 # Jump obects are rather simple, contain just initial and final orientations
 # dumbell/pair objects are not aware of jump objects.
-X = namedtuple('jump', 'state1 state2 c1 c2')
-class jump(X):
+NT_jmp = namedtuple('jump', 'state1 state2 c1 c2')
+class jump(NT_jmp):
     def __new__(cls, state1, state2, c1, c2):
         self = super(jump, cls).__new__(cls, state1, state2, c1, c2)
         # Do Type checking of input stateects
@@ -224,22 +224,24 @@ class jump(X):
 
         return strrep
 
-
-class connector(namedtuple('connector', 'state1 state2')):
+NT_conn = namedtuple('connector', 'state1 state2')
+class connector(NT_conn):
     """
     An object that simple connects two states.
     Similar to the jump object, but does not contain information regarding connecting path.
     Checks compatibility of connections as well.
     """
 
-    def __init__(self, state1, state2):
+    def __new__(cls, state1, state2):
         # Check compatibility
+        self = super(connector, cls).__new__(cls, state1, state2)
         if not (isinstance(self.state1, dumbbell) and isinstance(self.state2, dumbbell)):
             raise TypeError("Incompatible Initial and final states. They must be of the dumbbell type.")
-
         # Check correctness
         if not np.allclose(state1.R, 0.):
             raise ValueError("The initial dumbbell in a connector must always be at the origin unit cell")
+
+        return self
 
     def __eq__(self, other):
         return self.state1 == other.state1 and self.state2 == other.state2
