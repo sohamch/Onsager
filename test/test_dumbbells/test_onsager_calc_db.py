@@ -1,10 +1,16 @@
 from onsager.crystal import Crystal
 from onsager.crystalStars import zeroclean
-from onsager.OnsagerCalc import *
+from onsager.OnsagerCalc import dumbbellMediated
+
 from crysts import *
-from onsager.crystal import DB_disp, DB_disp4, pureDBContainer, mixedDBContainer
+from onsager.crystal import DB_disp, pureDBContainer, mixedDBContainer
 from onsager.DB_structs import dumbbell, SdPair, jump, connector
 import unittest
+import itertools
+
+ratelist = dumbbellMediated.ratelist
+symmratelist = dumbbellMediated.symmratelist
+
 
 class test_dumbbell_mediated(unittest.TestCase):
     def setUp(self):
@@ -301,8 +307,18 @@ class test_dumbbell_mediated(unittest.TestCase):
             st1 = jlist[0].state1
             st2 = jlist[0].state2
 
-            v1list = self.onsagercalculator.vkinetic.stateToVecStar_pure[st1]
-            v2list = self.onsagercalculator.vkinetic.stateToVecStar_pure[st2]
+            try:
+                v1list = self.onsagercalculator.vkinetic.stateToVecStar_pure[st1]
+            except KeyError:
+                v1list = []
+                # for solute-dumbbell complexes, only the origin state can have an empty basis
+                self.assertTrue(st1.is_zero(self.onsagercalculator.pdbcontainer))
+
+            try:
+                v2list = self.onsagercalculator.vkinetic.stateToVecStar_pure[st2]
+            except KeyError:
+                v2list = []
+                self.assertTrue(st2.is_zero(self.onsagercalculator.pdbcontainer))
 
             for v1, inv1 in v1list:
                 rate1_stars[v1, jt] = rate1_forward[jt]
@@ -336,10 +352,15 @@ class test_dumbbell_mediated(unittest.TestCase):
         for jt, jlist in enumerate(self.onsagercalculator.jnet43):
             st1 = jlist[0].state1
             st2 = jlist[0].state2
+            try:
+                v1list = self.onsagercalculator.vkinetic.stateToVecStar_pure[st1]
+            except KeyError: # for empty basis states - skip
+                v1list = []
+                self.assertTrue(st1.is_zero(self.onsagercalculator.pdbcontainer))
 
-            v1list = self.onsagercalculator.vkinetic.stateToVecStar_pure[st1]
-
+            # Mixed state must have non-empty basis
             v2list = self.onsagercalculator.vkinetic.stateToVecStar_mixed[st2]
+
             for v1, inv1 in v1list:
                 rate4_stars[v1, jt] = rate43_forward[jt]
             for v2, inv2 in v2list:
@@ -393,7 +414,11 @@ class test_dumbbell_mediated(unittest.TestCase):
         solute_vel_1 = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         solvent_vel_1 = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         for i, state in enumerate(self.onsagercalculator.vkinetic.starset.complexStates):
-            indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[state]
+            try:
+                indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[state]
+            except KeyError:
+                indlist = []
+                self.assertTrue(state.is_zero(self.onsagercalculator.pdbcontainer))
             # We have indlist as (IndOfStar, IndOfState)
             solute_vel_1[i, :] = sum([bias1_solute_vs[vstarind] *
                                       self.onsagercalculator.vkinetic.vecvec[vstarind][invstarind]
@@ -423,7 +448,12 @@ class test_dumbbell_mediated(unittest.TestCase):
         solute_vel_1_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         solvent_vel_1_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         for i, state in enumerate(self.onsagercalculator.vkinetic.starset.complexStates):
-            indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[state]
+            try:
+                indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[state]
+            except KeyError:
+                indlist = []
+                self.assertTrue(state.is_zero(self.onsagercalculator.pdbcontainer))
+
             solute_vel_1_new[i, :] = sum([vel1_solute_new_vs[tup[0]] *
                                            self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]] for tup in indlist])
             solvent_vel_1_new[i, :] = sum([vel1_solvent_new_vs[tup[0]] *
@@ -501,7 +531,11 @@ class test_dumbbell_mediated(unittest.TestCase):
         # Get the new biases in the cartesian basis.
         solvent_vel_10_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         for i, state in enumerate(self.onsagercalculator.vkinetic.starset.complexStates):
-            indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[state]
+            try:
+                indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[state]
+            except KeyError:
+                indlist = []
+                self.assertTrue(state.is_zero(self.onsagercalculator.pdbcontainer))
             # We have indlist as (IndOfStar, IndOfState)
             solvent_vel_10_new[i, :] = sum([vel10_solvent_new_vs[tup[0]] *
                                            self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]] for tup in indlist])
@@ -656,7 +690,12 @@ class test_dumbbell_mediated(unittest.TestCase):
         solvent_vel_4 = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
 
         for i, state in enumerate(self.onsagercalculator.vkinetic.starset.complexStates):
-            indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[state]
+            try:
+                indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[state]
+            except KeyError:
+                indlist = []
+                self.assertTrue(state.is_zero(self.onsagercalculator.pdbcontainer))
+
             solute_vel_4[i, :] = sum([vel4_solute_vs[tup[0]] * self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]]
                                      for tup in indlist])
             solvent_vel_4[i, :] = sum([vel4_solvent_vs[tup[0]] * self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]]
@@ -693,7 +732,12 @@ class test_dumbbell_mediated(unittest.TestCase):
         solute_vel_4_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         solvent_vel_4_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         for i, state in enumerate(self.onsagercalculator.vkinetic.starset.complexStates):
-            indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[state]
+            try:
+                indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[state]
+            except KeyError:
+                indlist = []
+                self.assertTrue(state.is_zero(self.onsagercalculator.pdbcontainer))
+
             solute_vel_4_new[i, :] = sum([vel4_solute_new_vs[tup[0]] *
                                           self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]] for tup in indlist])
             solvent_vel_4_new[i, :] = sum([vel4_solvent_new_vs[tup[0]] *
@@ -1030,8 +1074,17 @@ class test_dumbbell_mediated(unittest.TestCase):
         for jt, jlist in enumerate(self.onsagercalculator.jnet1):
             delom1 = omega1[jt] - omega0[self.onsagercalculator.om1types[jt]]
             for jmp in jlist:
-                indlist1 = self.onsagercalculator.vkinetic.stateToVecStar_pure[jmp.state1]
-                indlist2 = self.onsagercalculator.vkinetic.stateToVecStar_pure[jmp.state2]
+                try:
+                    indlist1 = self.onsagercalculator.vkinetic.stateToVecStar_pure[jmp.state1]
+                except KeyError:
+                    indlist1 = []
+                    self.assertTrue(jmp.state1.is_zero(self.onsagercalculator.pdbcontainer))
+                try:
+                    indlist2 = self.onsagercalculator.vkinetic.stateToVecStar_pure[jmp.state2]
+                except KeyError:
+                    indlist2 = []
+                    self.assertTrue(jmp.state2.is_zero(self.onsagercalculator.pdbcontainer))
+
                 for vi, invi in indlist1:
                     for vj, invj in indlist2:
                         delta_om_test[vi, vj] += \
@@ -1042,7 +1095,12 @@ class test_dumbbell_mediated(unittest.TestCase):
         for jt, jlist in enumerate(self.onsagercalculator.jnet3):
             for jmp in jlist:
                 indlist1 = self.onsagercalculator.vkinetic.stateToVecStar_mixed[jmp.state1]
-                indlist2 = self.onsagercalculator.vkinetic.stateToVecStar_pure[jmp.state2]
+                try:
+                    indlist2 = self.onsagercalculator.vkinetic.stateToVecStar_pure[jmp.state2]
+                except:
+                    indlist2 = []
+                    self.assertTrue(jmp.state2.is_zero(self.onsagercalculator.pdbcontainer))
+
                 for vi, invi in indlist1:
                     for vj, invj in indlist2:
                         delta_om_test[vi, vj] += \
@@ -1052,7 +1110,12 @@ class test_dumbbell_mediated(unittest.TestCase):
         # 3a.3 - Next, we consider the contribution by only the omega4 jumps - complex to mixed
         for jt, jlist in enumerate(self.onsagercalculator.jnet4):
             for jmp in jlist:
-                indlist1 = self.onsagercalculator.vkinetic.stateToVecStar_pure[jmp.state1]
+                try:
+                    indlist1 = self.onsagercalculator.vkinetic.stateToVecStar_pure[jmp.state1]
+                except:
+                    indlist1 = []
+                    self.assertTrue(jmp.state1.is_zero(self.onsagercalculator.pdbcontainer))
+
                 indlist2 = self.onsagercalculator.vkinetic.stateToVecStar_mixed[jmp.state2]
                 for vi, invi in indlist1:
                     for vj, invj in indlist2:
@@ -1077,7 +1140,11 @@ class test_dumbbell_mediated(unittest.TestCase):
                 star_i = self.onsagercalculator.vkinetic.starset.complexIndexdict[si][1]
                 dbwyck_i = self.onsagercalculator.pdbcontainer.invmap[si.db.iorind]
 
-                indlist1 = self.onsagercalculator.vkinetic.stateToVecStar_pure[si]
+                try:
+                    indlist1 = self.onsagercalculator.vkinetic.stateToVecStar_pure[si]
+                except:
+                    indlist1 = []
+                    self.assertTrue(si.is_zero(self.onsagercalculator.pdbcontainer))
 
                 for vi, invi in indlist1:
                     vec = self.onsagercalculator.vkinetic.vecvec[vi][invi]
@@ -1098,8 +1165,11 @@ class test_dumbbell_mediated(unittest.TestCase):
 
                 star_i = self.onsagercalculator.vkinetic.starset.complexIndexdict[si][1]
                 #         dbwyck_i = self.onsagercalculator.pdbcontainer.invmap[si.db.iorind]
-
-                indlist1 = self.onsagercalculator.vkinetic.stateToVecStar_pure[si]
+                try:
+                    indlist1 = self.onsagercalculator.vkinetic.stateToVecStar_pure[si]
+                except:
+                    indlist1 = []
+                    self.assertTrue(si.is_zero(self.onsagercalculator.pdbcontainer))
 
                 for vi, invi in indlist1:
                     vec = self.onsagercalculator.vkinetic.vecvec[vi][invi]
@@ -1230,7 +1300,12 @@ class test_dumbbell_mediated(unittest.TestCase):
         # about excluded omega0 jumps from the kinetic shell states.
         for i in range(Ncomp):
             comp_state = self.onsagercalculator.kinetic.complexStates[i]
-            vstar_indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[comp_state]
+            try:
+                vstar_indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[comp_state]
+            except KeyError:
+                vstar_indlist = []
+                self.assertTrue(comp_state.is_zero(self.onsagercalculator.pdbcontainer))
+
             starind = self.onsagercalculator.kinetic.complexIndexdict[comp_state][1]
             dbwyckind = self.onsagercalculator.kinetic.star2symlist[starind]
             # Also, check the correctness of the omega_escape arrays.
@@ -1362,7 +1437,12 @@ class test_dumbbell_mediated(unittest.TestCase):
 
         # first, we convert the complex states into cartesian form
         for i, state in enumerate(self.onsagercalculator.kinetic.complexStates):
-            indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[state]
+            try:
+                indlist = self.onsagercalculator.vkinetic.stateToVecStar_pure[state]
+            except KeyError:
+                indlist = []
+                self.assertTrue(state.is_zero(self.onsagercalculator.pdbcontainer))
+
             bias_solute_calc[i, :] = sum([self.onsagercalculator.biases_solute_vs[tup[0]] *
                                           self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]] for tup in indlist])
             bias_solvent_calc[i, :] = sum([self.onsagercalculator.biases_solvent_vs[tup[0]] *
