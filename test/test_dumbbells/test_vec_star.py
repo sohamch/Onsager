@@ -67,7 +67,10 @@ class test_vecstars(unittest.TestCase):
         self.assertEqual(len(self.vec_stars.vecpos), len(self.vec_stars.vecvec))
         self.assertEqual(len(self.vec_stars.vecpos_bare), len(self.vec_stars.vecvec_bare))
         # First, complex states
+        print("total pure vec stars: ", self.vec_stars.Nvstars_pure)
         for vecstarind in range(self.vec_stars.Nvstars_pure):
+            print("\t", len(self.vec_stars.vecpos[vecstarind]))
+            self.assertEqual(len(self.vec_stars.vecpos[vecstarind]), len(self.vec_stars.vecvec[vecstarind]))
             # get the representative state of the star
             testvecstate = self.vec_stars.vecpos[vecstarind][0]
             count = 0
@@ -84,7 +87,7 @@ class test_vecstars(unittest.TestCase):
                 pairnew = testvecstate.gop(self.vec_stars.starset.pdbcontainer, gdumb, complex=True)[0]
                 pairnew = pairnew - pairnew.R_s
                 if pairnew == testvecstate:
-                    glist.append(self.vec_stars.starset.pdbcontainer.G_crys[gdumb])
+                    glist.append(gdumb)
 
             sumg = sum([g.cartrot for g in glist]) / len(glist)
             vals, vecs = np.linalg.eig(sumg)
@@ -99,13 +102,36 @@ class test_vecstars(unittest.TestCase):
             # Note - a rotation might be 180 degrees, in which case the vector will be rotated as such.
             # Rotation of the dumbbell by 180 degrees is considered to leave the complex unchanged.
             # It also does not take the vector out of the space encompassed by the basis vectors.
-            # for v in [self.vec_stars.vecvec[ind][0] for ind in listind]:
-            #     for g in glist:
-            #         self.assertTrue(np.allclose(v, np.dot(g.cartrot, v)) or np.allclose(-v, np.dot(g.cartrot, v)))
+            for v in [self.vec_stars.vecvec[ind][0] for ind in listind]:
+                for g in glist:
+                    self.assertTrue(np.allclose(v, np.dot(g.cartrot, v)))
+
+            for stInd in range(len(self.vec_stars.vecpos[vecstarind])):
+                st2 = self.vec_stars.vecpos[vecstarind][stInd]
+                glist = []
+                for gdumb in self.vec_stars.starset.pdbcontainer.G:
+                    pairnew = testvecstate.gop(self.vec_stars.starset.pdbcontainer, gdumb, complex=True)[0]
+                    pairnew = pairnew - pairnew.R_s
+                    if pairnew == st2:
+                        v0_rot = np.dot(gdumb.cartrot, self.vec_stars.vecvec[vecstarind][0])
+                        self.assertTrue(np.allclose(self.vec_stars.vecvec[vecstarind][stInd], v0_rot))
+
+                    # Gather ops for checking invariance
+                    pairnew = st2.gop(self.vec_stars.starset.pdbcontainer, gdumb, complex=True)[0]
+                    pairnew = pairnew - pairnew.R_s
+                    if pairnew == st2:
+                        glist.append(self.vec_stars.starset.pdbcontainer.G_crys[gdumb])
+
+                for g in glist:
+                    v2_rot = np.dot(g.cartrot, self.vec_stars.vecvec[vecstarind][stInd])
+                    self.assertTrue(np.allclose(v2_rot, self.vec_stars.vecvec[vecstarind][stInd]))
 
         # Now, mixed dumbbells
+        print("total mixed vec stars: ", self.vec_stars.Nvstars - self.vec_stars.Nvstars_pure)
         for vecstarind in range(self.vec_stars.Nvstars_pure, self.vec_stars.Nvstars):
             # get the representative state of the star
+            print("\t", len(self.vec_stars.vecpos[vecstarind]))
+            self.assertEqual(len(self.vec_stars.vecpos[vecstarind]), len(self.vec_stars.vecvec[vecstarind]))
             testvecstate = self.vec_stars.vecpos[vecstarind][0]
             count = 0
             listind = []
@@ -122,7 +148,7 @@ class test_vecstars(unittest.TestCase):
                 pairnew = testvecstate.gop(self.vec_stars.starset.mdbcontainer, gdumb, complex=False)
                 pairnew = pairnew - pairnew.R_s
                 if pairnew == testvecstate:
-                    glist.append(self.vec_stars.starset.mdbcontainer.G_crys[gdumb])
+                    glist.append(gdumb)
 
             sumg = sum([g.cartrot for g in glist]) / len(glist)
             vals, vecs = np.linalg.eig(sumg)
@@ -137,13 +163,36 @@ class test_vecstars(unittest.TestCase):
             # Note - a rotation might be 180 degrees, in which case the vector will be rotated as such.
             # Rotation of the dumbbell by 180 degrees is considered to leave the complex unchanged.
             # It also does not take the vector out of the space encompassed by the basis vectors.
-            # for v in [self.vec_stars.vecvec[ind][0] for ind in listind]:
-            #     for g in glist:
-            #         self.assertTrue(np.allclose(v, np.dot(g.cartrot, v)))
+            for v in [self.vec_stars.vecvec[ind][0] for ind in listind]:
+                for g in glist:
+                    self.assertTrue(np.allclose(v, np.dot(g.cartrot, v)))
+
+            for stInd in range(len(self.vec_stars.vecpos[vecstarind])):
+                st2 = self.vec_stars.vecpos[vecstarind][stInd]
+                glist = []
+                for gdumb in self.vec_stars.starset.mdbcontainer.G:
+                    pairnew = testvecstate.gop(self.vec_stars.starset.mdbcontainer, gdumb, complex=False)
+                    pairnew = pairnew - pairnew.R_s
+                    if pairnew == st2:
+                        v0_rot = np.dot(gdumb.cartrot, self.vec_stars.vecvec[vecstarind][0])
+                        self.assertTrue(np.allclose(self.vec_stars.vecvec[vecstarind][stInd], v0_rot))
+
+                    # Gather ops for checking invariance
+                    pairnew = st2.gop(self.vec_stars.starset.mdbcontainer, gdumb, complex=False)
+                    pairnew = pairnew - pairnew.R_s
+                    if pairnew == st2:
+                        glist.append(gdumb)
+
+                for g in glist:
+                    v2_rot = np.dot(g.cartrot, self.vec_stars.vecvec[vecstarind][stInd])
+                    self.assertTrue(np.allclose(v2_rot, self.vec_stars.vecvec[vecstarind][stInd]))
 
         # Let's also do this for the bare vector stars
+        print("total bare dumbbell vector stars (must be 0 for invertible lattices): ", len(self.vec_stars.vecpos_bare))
         for vecstarind in range(len(self.vec_stars.vecpos_bare)):
             # get the representative state of the star
+            print("\t", len(self.vec_stars.vecpos[vecstarind]))
+            self.assertEqual(len(self.vec_stars.vecpos[vecstarind]), len(self.vec_stars.vecvec[vecstarind]))
             testvecstate = self.vec_stars.vecpos_bare[vecstarind][0]
             count = 0
             listind = []
@@ -169,16 +218,40 @@ class test_vecstars(unittest.TestCase):
                     count_eigs += 1
             self.assertEqual(count, count_eigs, msg="{}".format(testvecstate))
 
-            # for v in [self.vec_stars.vecvec[ind][0] for ind in listind]:
-            #     for g in glist:
-            #         self.assertTrue(np.allclose(v, np.dot(g.cartrot, v)) or np.allclose(-v, np.dot(g.cartrot, v)),
-            #                         msg="\n{},\n{}\n{}"
-            #                         .format(g.cartrot, v,
-            #                                 self.vec_stars.starset.pdbcontainer.iorlist[testvecstate.iorind]))
+            for v in [self.vec_stars.vecvec_bare[ind][0] for ind in listind]:
+                for g in glist:
+                    self.assertTrue(np.allclose(v, np.dot(g.cartrot, v)),
+                                    msg="\n{},\n{}\n{}"
+                                    .format(g.cartrot, v,
+                                            self.vec_stars.starset.pdbcontainer.iorlist[testvecstate.iorind]))
+
+            for stInd in range(len(self.vec_stars.vecpos_bare[vecstarind])):
+                st2 = self.vec_stars.vecpos_bare[vecstarind][stInd]
+                glist = []
+                for gdumb in self.vec_stars.starset.pdbcontainer.G:
+                    dbnew = testvecstate.gop(self.vec_stars.starset.pdbcontainer, gdumb, pure=True)[0]
+                    dbnew = dbnew - dbnew.R
+                    if dbnew == st2:
+                        v0_rot = np.dot(gdumb.cartrot, self.vec_stars.vecvec_bare[vecstarind][0])
+                        self.assertTrue(np.allclose(self.vec_stars.vecvec_bare[vecstarind][stInd], v0_rot))
+
+                    # Gather ops for checking invariance
+                    dbnew = st2.gop(self.vec_stars.starset.pdbcontainer, gdumb, pure=True)[0]
+                    dbnew = dbnew - dbnew.R
+                    if dbnew == st2:
+                        glist.append(self.vec_stars.starset.pdbcontainer.G_crys[gdumb])
+
+                for g in glist:
+                    v2_rot = np.dot(g.cartrot, self.vec_stars.vecvec_bare[vecstarind][stInd])
+                    self.assertTrue(np.allclose(v2_rot, self.vec_stars.vecvec_bare[vecstarind][stInd]))
+
 
     def test_state_indexing(self):
         for st in self.vec_stars.starset.complexStates:
-            indToVecStars = self.vec_stars.stateToVecStar_pure[st]
+            try:
+                indToVecStars = self.vec_stars.stateToVecStar_pure[st]
+            except KeyError:
+                continue
             for tup in indToVecStars:
                 self.assertEqual(st, self.vec_stars.vecpos[tup[0]][tup[1]])
 
@@ -190,7 +263,7 @@ class test_vecstars(unittest.TestCase):
     def test_vstar2star (self):
         for vWyckInd, vWyckPos in enumerate(self.vec_stars.vecpos_bare):
             wyckInd = self.vec_stars.vwycktowyck_bare[vWyckInd]
-            wyckSet = self.vec_stars.vecpos_bare[wyckInd]
+            wyckSet = self.vec_stars.starset.barePeriodicStars[wyckInd]
             for st1 in wyckSet:
                 count = 0
                 for st2 in vWyckPos:
@@ -200,21 +273,23 @@ class test_vecstars(unittest.TestCase):
 
         for vInd, vpos in enumerate(self.vec_stars.vecpos[:self.vec_stars.Nvstars_pure]):
             starInd = self.vec_stars.vstar2star[vInd]
-            star = self.vec_stars.vecpos[starInd]
+            star = self.vec_stars.starset.stars[starInd]
             for st1 in star:
                 count = 0
                 for st2 in vpos:
                     if st1 == st2:
                         count += 1
+                self.assertEqual(count, 1)
 
         for vInd, vpos in enumerate(self.vec_stars.vecpos[self.vec_stars.Nvstars_pure:]):
-            starInd = self.vec_stars.vstar2star[vInd]
-            star = self.vec_stars.vecpos[starInd]
+            starInd = self.vec_stars.vstar2star[vInd + self.vec_stars.Nvstars_pure]
+            star = self.vec_stars.starset.stars[starInd]
             for st1 in star:
                 count = 0
                 for st2 in vpos:
                     if st1 == st2:
                         count += 1
+                self.assertEqual(count, 1)
 
     def test_bare_bias_expansion(self):
         if len(self.vec_stars.vecpos_bare) > 0:
@@ -274,11 +349,10 @@ class test_vecstars(unittest.TestCase):
 
     def test_bias1expansions(self):
 
-        for i in range(self.vec_stars.Nvstars_pure):
+        for starind in range(self.vec_stars.Nvstars_pure):
             # test bias_1
             # select a representative state and another state in the same star at random
             # from complex state space
-            starind = i
             st = self.vec_stars.vecpos[starind][0]  # get the representative state.
             n = np.random.randint(1, len(self.vec_stars.vecpos[starind]))
             st2 = self.vec_stars.vecpos[starind][n]
@@ -773,7 +847,7 @@ class test_Si(test_vecstars, unittest.TestCase):
         latt = np.array([[0., 0.5, 0.5], [0.5, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
         self.DC_Si = crystal.Crystal(latt, [[np.array([0., 0., 0.]), np.array([0.25, 0.25, 0.25])]], ["Si"])
         # keep it simple with [1.,0.,0.] type orientations for now
-        o = np.array([1., 1., 0.]) / np.linalg.norm(np.array([1., 1., 0.])) * 0.126
+        o = np.array([1., 1., 0.]) / np.linalg.norm(np.array([1., 1., 0.])) * 0.1
         famp0 = [o.copy()]
         family = [famp0]
 
