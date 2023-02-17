@@ -415,18 +415,18 @@ class test_2d(unittest.TestCase):
         indices = []
         for i, jlist in enumerate(jset):
             for q, j in enumerate(jlist):
-                if j.state1 == test_dbi:
-                    if j.state2 == test_dbf:
-                        if j.c1 == -1 and j.c2 == 1:
-                            count += 1
-                            indices.append((i, q))
-                            jtest = jlist
+                self.assertTrue(j.c1 == j.c2 == 1) # solute always moves
+                if j.state1.db == test_dbi:
+                    if j.state2.db == test_dbf:
+                        count += 1
+                        indices.append((i, q))
+                        jtest = jlist
         # print (indices)
         self.assertEqual(count, 1)  # see that this jump has been taken only once into account
         try:
-            self.assertEqual(len(jtest), 4)
+            self.assertEqual(len(jtest), 8)
         except AssertionError:
             for jmp in jtest:
                 print(mdbcontainer.iorlist[0])
                 print(jmp)
-        self.assertEqual(len(jtest), 4)
+        self.assertEqual(len(jtest), 8)
