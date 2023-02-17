@@ -8,7 +8,43 @@ from onsager.DB_structs import dumbbell, SdPair, jump, connector
 import unittest
 import collections
 
-# class test_DB_structs(unittest.TestCase):
+class test_DB_structs(unittest.TestCase):
+    def setUp(self):
+        latt = np.array([[0., 0.5, 0.5], [0.5, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
+        DC_Si = crystal.Crystal(latt, [[np.array([0., 0., 0.]), np.array([0.25, 0.25, 0.25])]], ["Si"])
+        famp0 = [np.array([1., 0., 0.]) * 0.145]
+        family = [famp0]
+        self.pdbcontainer = pureDBContainer(DC_Si, 0, family)
+        self.mdbcontainer = mixedDBContainer(DC_Si, 0, family)
+
+        iorInd_test = 0
+        for iorInd in range(len(self.pdbcontainer.iorlist)):
+            i, o = self.pdbcontainer.iorlist[iorInd]
+            if np.allclose(o, famp0[0]) or np.allclose(o, -famp0[0]):
+                iorInd_test = iorInd
+
+        print(self.pdbcontainer.iorlist[iorInd_test])
+        self.iorInd_test = iorInd_test
+        self.Rdb_test = np.random.randint(0, 5, 3)
+
+    def test_dumbbells(self):
+        db_test = dumbbell(self.iorInd_test, self.Rdb_test)
+        db_test_2 = dumbbell(self.iorInd_test, self.Rdb_test + 2) # change the lattice position
+        db_test_3 = dumbbell(self.iorInd_test + 1, self.Rdb_test) # change the site, orientation index
+        db_test_4 = db_test_2 - np.array([2,2,2], dtype=int)  # translate db_test2 back to check addition
+
+        self.assertNotEqual(db_test_2, db_test)
+        self.assertNotEqual(db_test_3, db_test)
+        self.assertEqual(db_test_4, db_test)
+
+        # Now check group operations
+        for gdumb in self.pdbcontainer.G:
+            dbnew = db_test.gop(self.pdbcontainer, gdumb)[0]
+            g_crys = self.pdbcontainer.G_crys[gdumb]
+
+
+
+
 
 
 class test_StarSet(unittest.TestCase):
