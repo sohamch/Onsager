@@ -1656,7 +1656,7 @@ yaml.add_representer(np.float64, float_representer)
 
 # Define function to compute displacement of species during dumbbell jumps
 # In this case, we are dealing with pure->pure or mixed->mixed dumbbell jumps
-# For a test of this, see tes_jnet_0 and test_jnet_2 functions in test_DBContainer.py
+# For a test of this, see tes_jnet_0 and test_jnet_2 functions in test_dumbbells/test_DBContainer
 def DB_disp(dbcontainer, obj1, obj2):
     """
     Computes the transport vector for the initial and final states of a jump
