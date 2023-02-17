@@ -1,4 +1,6 @@
 import numpy as np
+
+import crystal
 from onsager.DB_structs import dumbbell, SdPair, jump
 from crysts import *
 import itertools
@@ -150,11 +152,17 @@ class test_statemaking(unittest.TestCase):
                 for jindex in range(len(jind[lindex])):
                     (i1, o1) = pdbcontainer.iorlist[jind[lindex][jindex][0][0]]
                     (i2, o2) = pdbcontainer.iorlist[jind[lindex][jindex][0][1]]
+                    R1 = jset[lindex][jindex].state1.R
+                    R2 = jset[lindex][jindex].state2.R
                     self.assertEqual(pdbcontainer.iorlist[jset[lindex][jindex].state1.iorind][0], i1)
                     self.assertEqual(pdbcontainer.iorlist[jset[lindex][jindex].state2.iorind][0], i2)
                     self.assertTrue(np.allclose(pdbcontainer.iorlist[jset[lindex][jindex].state1.iorind][1], o1))
                     self.assertTrue(np.allclose(pdbcontainer.iorlist[jset[lindex][jindex].state2.iorind][1], o2))
                     dx = crystal.DB_disp(pdbcontainer, jset[lindex][jindex].state1, jset[lindex][jindex].state2)
+                    dx_explicit = pdbcontainer.crys.pos2cart(R2, (pdbcontainer.chem, i2)) - \
+                                  pdbcontainer.crys.pos2cart(R1, (pdbcontainer.chem, i1))
+                    self.assertTrue(np.allclose(dx, jind[lindex][jindex][1]))
+                    self.assertTrue(np.allclose(dx, dx_explicit))
                     self.assertTrue(np.allclose(dx, jind[lindex][jindex][1]))
 
     def test_mStates(self):
@@ -213,11 +221,11 @@ class test_statemaking(unittest.TestCase):
         jtest = None
         for i, jlist in enumerate(jset):
             for q, j in enumerate(jlist):
+                self.assertTrue(j.c1 == j.c2 == 1) # mixed dumbbell jumps always involve the solute
                 if j.state1.db == test_dbi:
                     if j.state2.db == test_dbf:
-                        if j.c1 == j.c2 == 1:
-                            count += 1
-                            jtest = jlist
+                        count += 1
+                        jtest = jlist
         self.assertEqual(count, 1)  # see that this jump has been taken only once into account
         self.assertEqual(len(jtest), 48)
 
@@ -247,19 +255,27 @@ class test_statemaking(unittest.TestCase):
             for jindex in range(len(jind[lindex])):
                 (i1, o1) = mdbcontainer.iorlist[jind[lindex][jindex][0][0]]
                 (i2, o2) = mdbcontainer.iorlist[jind[lindex][jindex][0][1]]
+                R2 = jset[lindex][jindex].state2.db.R
+                R1 = jset[lindex][jindex].state1.db.R
                 self.assertEqual(mdbcontainer.iorlist[jset[lindex][jindex].state1.db.iorind][0], i1)
                 self.assertEqual(mdbcontainer.iorlist[jset[lindex][jindex].state2.db.iorind][0], i2)
                 self.assertTrue(np.allclose(mdbcontainer.iorlist[jset[lindex][jindex].state1.db.iorind][1], o1))
                 self.assertTrue(np.allclose(mdbcontainer.iorlist[jset[lindex][jindex].state2.db.iorind][1], o2))
+                dx = crystal.DB_disp(mdbcontainer, jset[lindex][jindex].state1, jset[lindex][jindex].state2)
+                dx_explicit =  mdbcontainer.crys.pos2cart(R2, (mdbcontainer.chem, i2)) - \
+                      mdbcontainer.crys.pos2cart(R1, (mdbcontainer.chem, i1))
+                self.assertTrue(np.allclose(dx, jind[lindex][jindex][1]))
+                self.assertTrue(np.allclose(dx, dx_explicit))
 
-class test_2d(test_statemaking):
+class test_2d(unittest.TestCase):
     def setUp(self):
-        o = np.array([0.1, 0.])
+        o = np.array([0., .2])
         famp0 = [o.copy()]
         self.family = [famp0]
 
-        latt = np.array([[1., 0.], [0., 1.]])
-        self.crys = crystal.Crystal(latt, [np.array([0, 0])], ["A"])
+        latt = np.array([[1., 0.], [0., np.sqrt(2)]])
+        self.crys = crystal.Crystal(latt, [np.array([0., 0.]), np.array([0.5, 0.5])], ["A"])
+        print(self.crys)
 
     def test_dbStates(self):
         # check that symmetry analysis is correct
@@ -293,6 +309,60 @@ class test_2d(test_statemaking):
                 st_iorlist = dbstates.iorlist[stind]
                 self.assertEqual(st_iorlist[0], state[0])
                 self.assertTrue(np.allclose(st_iorlist[1], state[1], atol=dbstates.crys.threshold))
+
+    def test_jnet0(self):
+        # set up the container
+        pdbcontainer = crystal.pureDBContainer(self.crys, 0, self.family)
+        cut = 1.01 * np.linalg.norm(self.crys.lattice[:, 0])
+        jset, jind = pdbcontainer.jumpnetwork(cut, 0.01, 0.01)
+        self.assertEqual(len(pdbcontainer.iorlist), 1)
+        idx = pdbcontainer.getIndex((0, np.array([0., .2])))
+        self.assertEqual(idx, 0)
+        test_dbi = dumbbell(idx, np.array([0, 0]))
+        test_dbf = dumbbell(idx, np.array([0, 1]))
+        count = 0
+        indices = []
+        for i, jlist in enumerate(jset):
+            for q, j in enumerate(jlist):
+                if j.state1 == test_dbi:
+                    if j.state2 == test_dbf:
+                        if j.c1 == -1 and j.c2 == 1:
+                            count += 1
+                            indices.append((i, q))
+                            jtest = jlist
+        # print (indices)
+        self.assertEqual(count, 1)  # see that this jump has been taken only once into account
+        try:
+            self.assertEqual(len(jtest), 4)
+        except AssertionError:
+            for jmp in jtest:
+                print(pdbcontainer.iorlist[0])
+                print(jmp)
+        self.assertEqual(len(jtest), 4)
+
+
+        # test_indices
+        # First check if they have the same number of lists and elements
+        self.assertEqual(len(jind), len(jset))
+        # now check if all the elements are correctly correspondent
+        for lindex in range(len(jind)):
+            self.assertEqual(len(jind[lindex]), len(jset[lindex]))
+            for jindex in range(len(jind[lindex])):
+                self.assertEqual(jind[lindex][jindex][0][0], 0)
+                self.assertEqual(jind[lindex][jindex][0][1], 0)
+                (i1, o1) = pdbcontainer.iorlist[jind[lindex][jindex][0][0]]
+                (i2, o2) = pdbcontainer.iorlist[jind[lindex][jindex][0][1]]
+                self.assertEqual(i1, 0)
+                self.assertEqual(i2, 0)
+                self.assertTrue(np.allclose(o1, pdbcontainer.iorlist[0][1]))
+                self.assertTrue(np.allclose(o2, pdbcontainer.iorlist[0][1]))
+                self.assertEqual(pdbcontainer.iorlist[jset[lindex][jindex].state1.iorind][0], i1)
+                self.assertEqual(pdbcontainer.iorlist[jset[lindex][jindex].state2.iorind][0], i2)
+                self.assertTrue(np.allclose(pdbcontainer.iorlist[jset[lindex][jindex].state1.iorind][1], o1))
+                self.assertTrue(np.allclose(pdbcontainer.iorlist[jset[lindex][jindex].state2.iorind][1], o2))
+                dx = crystal.DB_disp(pdbcontainer, jset[lindex][jindex].state1, jset[lindex][jindex].state2)
+                self.assertAlmostEqual(np.linalg.norm(dx), np.linalg.norm(pdbcontainer.crys.lattice[:, 0]), places=8)
+                self.assertTrue(np.allclose(dx, jind[lindex][jindex][1]))
 
     def test_mStates(self):
         dbstates = crystal.pureDBContainer(self.crys, 0, self.family)
@@ -331,3 +401,32 @@ class test_2d(test_statemaking):
             for idx, state in zip(symIndlist, symstlist):
                 self.assertEqual(mstates1.iorlist[idx][0],state[0])
                 self.assertTrue(np.allclose(mstates1.iorlist[idx][1], state[1], atol=mstates1.crys.threshold))
+
+    def test_jnet2(self):
+        # set up the container
+        mdbcontainer = crystal.mixedDBContainer(self.crys, 0, self.family)
+        cut = 1.01 * np.linalg.norm(self.crys.lattice[:, 0])
+        jset, jind = mdbcontainer.jumpnetwork(cut, 0.01, 0.01)
+        self.assertEqual(len(mdbcontainer.iorlist), 2)
+        idx = mdbcontainer.getIndex((0, np.array([0., .2])))
+        test_dbi = dumbbell(idx, np.array([0, 0]))
+        test_dbf = dumbbell(idx, np.array([0, 1]))
+        count = 0
+        indices = []
+        for i, jlist in enumerate(jset):
+            for q, j in enumerate(jlist):
+                if j.state1 == test_dbi:
+                    if j.state2 == test_dbf:
+                        if j.c1 == -1 and j.c2 == 1:
+                            count += 1
+                            indices.append((i, q))
+                            jtest = jlist
+        # print (indices)
+        self.assertEqual(count, 1)  # see that this jump has been taken only once into account
+        try:
+            self.assertEqual(len(jtest), 4)
+        except AssertionError:
+            for jmp in jtest:
+                print(mdbcontainer.iorlist[0])
+                print(jmp)
+        self.assertEqual(len(jtest), 4)
