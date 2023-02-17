@@ -1609,33 +1609,33 @@ yaml.add_constructor(VACANCYTHERMOKINETICS_YAMLTAG, vacancyThermoKinetics.vacanc
 # Onsager calculator for dumbbell mediated diffusion
 
 # Functions to compute rates and energies
-def stateprob(pre, betaene, invmap):
-    """Returns our (i,or) probabilities, normalized, as a vector.
-       Straightforward extension from vacancy case.
-    """
-    # be careful to make sure that we don't under-/over-flow on beta*ene
-    minbetaene = min(betaene)
-    rho = np.array([pre[w] * np.exp(minbetaene - betaene[w]) for w in invmap])
-    return rho / sum(rho)
-
-
-# make a static method and reuse later for solute case?
-def ratelist(jumpnetwork, pre, betaene, preT, betaeneT, invmap):
-    """Returns a list of lists of rates, matched to jumpnetwork"""
-    stateene = np.array([betaene[w] for w in invmap])
-    statepre = np.array([pre[w] for w in invmap])
-    return [[pT * np.exp(stateene[i] - beT) / statepre[i]
-             for (i, j), dx in t]
-            for t, pT, beT in zip(jumpnetwork, preT, betaeneT)]
-
-
-def symmratelist(jumpnetwork, pre, betaene, preT, betaeneT, invmap):
-    """Returns a list of lists of symmetrized rates, matched to jumpnetwork"""
-    stateene = np.array([betaene[w] for w in invmap])
-    statepre = np.array([pre[w] for w in invmap])
-    return [[pT * np.exp(0.5 * stateene[i] + 0.5 * stateene[j] - beT) / np.sqrt(statepre[i] * statepre[j])
-             for (i, j), dx in t]
-            for t, pT, beT in zip(jumpnetwork, preT, betaeneT)]
+# def stateprob(pre, betaene, invmap):
+#     """Returns our (i,or) probabilities, normalized, as a vector.
+#        Straightforward extension from vacancy case.
+#     """
+#     # be careful to make sure that we don't under-/over-flow on beta*ene
+#     minbetaene = min(betaene)
+#     rho = np.array([pre[w] * np.exp(minbetaene - betaene[w]) for w in invmap])
+#     return rho / sum(rho)
+#
+#
+# # make a static method and reuse later for solute case?
+# def ratelist(jumpnetwork, pre, betaene, preT, betaeneT, invmap):
+#     """Returns a list of lists of rates, matched to jumpnetwork"""
+#     stateene = np.array([betaene[w] for w in invmap])
+#     statepre = np.array([pre[w] for w in invmap])
+#     return [[pT * np.exp(stateene[i] - beT) / statepre[i]
+#              for (i, j), dx in t]
+#             for t, pT, beT in zip(jumpnetwork, preT, betaeneT)]
+#
+#
+# def symmratelist(jumpnetwork, pre, betaene, preT, betaeneT, invmap):
+#     """Returns a list of lists of symmetrized rates, matched to jumpnetwork"""
+#     stateene = np.array([betaene[w] for w in invmap])
+#     statepre = np.array([pre[w] for w in invmap])
+#     return [[pT * np.exp(0.5 * stateene[i] + 0.5 * stateene[j] - beT) / np.sqrt(statepre[i] * statepre[j])
+#              for (i, j), dx in t]
+#             for t, pT, beT in zip(jumpnetwork, preT, betaeneT)]
 
 
 class dumbbellMediated():
@@ -1811,6 +1811,36 @@ class dumbbellMediated():
         self.kinouter = self.vkinetic.outer()
         print("built outer product tensor:{}".format(time.time() - start))
         # self.clearcache()
+
+    # staticmethod functions to compute rates and energies of isolated dumbbell states
+    # These are taken from the interstitial class
+    @staticmethod
+    def stateprob(pre, betaene, invmap):
+        """Returns our (i,or) probabilities, normalized, as a vector.
+           Straightforward extension from vacancy case.
+        """
+        # be careful to make sure that we don't under-/over-flow on beta*ene
+        minbetaene = min(betaene)
+        rho = np.array([pre[w] * np.exp(minbetaene - betaene[w]) for w in invmap])
+        return rho / sum(rho)
+
+    @staticmethod
+    def ratelist(jumpnetwork, pre, betaene, preT, betaeneT, invmap):
+        """Returns a list of lists of rates, matched to jumpnetwork"""
+        stateene = np.array([betaene[w] for w in invmap])
+        statepre = np.array([pre[w] for w in invmap])
+        return [[pT * np.exp(stateene[i] - beT) / statepre[i]
+                 for (i, j), dx in t]
+                for t, pT, beT in zip(jumpnetwork, preT, betaeneT)]
+
+    @staticmethod
+    def symmratelist(jumpnetwork, pre, betaene, preT, betaeneT, invmap):
+        """Returns a list of lists of symmetrized rates, matched to jumpnetwork"""
+        stateene = np.array([betaene[w] for w in invmap])
+        statepre = np.array([pre[w] for w in invmap])
+        return [[pT * np.exp(0.5 * stateene[i] + 0.5 * stateene[j] - beT) / np.sqrt(statepre[i] * statepre[j])
+                 for (i, j), dx in t]
+                for t, pT, beT in zip(jumpnetwork, preT, betaeneT)]
 
     def calc_eta(self, rate0list, omega0escape, rate2list, omega2escape, eta2shift=True):
         """
@@ -2470,10 +2500,10 @@ class dumbbellMediated():
         pre0, pre0T = np.ones_like(bFdb0), np.ones_like(bFT0)
         pre2, pre2T = np.ones_like(bFdb2), np.ones_like(bFT2)
 
-        rate0list = ratelist(self.jnet0_indexed, pre0, bFdb0 - bFdb0_min, pre0T, bFT0,
+        rate0list = self.ratelist(self.jnet0_indexed, pre0, bFdb0 - bFdb0_min, pre0T, bFT0,
                              self.vkinetic.starset.pdbcontainer.invmap)
 
-        rate2list = ratelist(self.jnet2_indexed, pre2, bFdb2 - bFdb2_min, pre2T, bFT2,
+        rate2list = self.ratelist(self.jnet2_indexed, pre2, bFdb2 - bFdb2_min, pre2T, bFT2,
                              self.vkinetic.starset.mdbcontainer.invmap)
 
         # 3. Make the symmetrized rates and escape rates for calculating eta0, GF, bias and gamma.
@@ -2655,7 +2685,7 @@ class dumbbellMediated():
         pr_states = (complex_prob, mixed_prob)  # For testing
         # Next, we need the bare dumbbell probabilities for the non-local part of the solvent-solvent transport
         # coefficients
-        bareprobs = stateprob(pre0, bFdb0 - bFdb0_min, self.pdbcontainer.invmap)
+        bareprobs = self.stateprob(pre0, bFdb0 - bFdb0_min, self.pdbcontainer.invmap)
         # This ensured that summing over all complex + mixed states gives a probability of 1.
         # Note that this is why the bFdb0, bFS and bFdb2 values have to be entered unshifted.
         # The complex and mixed dumbbell energies need to be with respect to the same reference.
