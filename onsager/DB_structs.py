@@ -181,17 +181,6 @@ class jump(NT_jmp):
         return hash((hash(self.state1), hash(self.state2), self.c1, self.c2))
         # return id(self)
 
-    def __add__(self, other):
-        # Do type checking of input operands and jump states
-        if not isinstance(other, dumbbell):
-            raise TypeError("For now jumps can only be added to dumbbell objects.")
-        if not self.state1.iorind == other.iorind:
-            raise ArithmeticError("Operand dumbbell and initial dumbbell of jump must have same configuration.")
-        return dumbbell(self.state2.iorind, other.R + self.state2.R - self.state1.R)  # Add the lattice transition in.
-
-    def __radd__(self, other):
-        return self.__add__(other)
-
     def __neg__(self):
         # negation is used to flip the transition in the opposite direction
         return self.__class__(self.state2, self.state1, self.c2, self.c1)
@@ -262,9 +251,3 @@ class connector(NT_conn):
             return self.__class__(db1new, db2new)
         else:
             return self.__class__(state1new - state1new.R, state2new - state1new.R)
-
-    def shift(self):
-        """
-        :return: returns a translated connector with the initial state at the origin unit cell.
-        """
-        return self.__class__(self.state1 - self.state1.R, self.state2 - self.state1.R)
