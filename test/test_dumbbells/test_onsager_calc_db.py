@@ -19,7 +19,7 @@ class test_dumbbell_mediated(unittest.TestCase):
         latt = np.array([[0.5, 0.5, 0.], [0., 0.5, 0.5], [0.5, 0., 0.5]]) * 0.55
         self.DC_Si = Crystal(latt, [[np.array([0., 0., 0.]), np.array([0.25, 0.25, 0.25])]], ["Si"])
         # keep it simple with [1.,0.,0.] type orientations for now
-        o = np.array([1., 0., 0.]) * 0.126
+        o = np.array([1., 1., 0.])/(np.linalg.norm(np.array([1., 1., 0.]))) * 0.1
         famp0 = [o.copy()]
         family = [famp0]
 
@@ -107,9 +107,10 @@ class test_dumbbell_mediated(unittest.TestCase):
             self.assertTrue(np.allclose(self.onsagercalculator.eta00_solvent,
                                         np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates),
                                                   self.onsagercalculator.crys.dim))))
-            print("Invertible lattice, zero vectors.")
+            print("Invertible pure dumbbell - checked zero bare relaxation vectors.")
 
         else:
+            print("Non zero basis detected for pure dumbbell.")
             # Here, we check if for periodic dumbbells, we have the same non- local solvent velocity vector.
             for i, state1 in enumerate(self.onsagercalculator.vkinetic.starset.complexStates):
                 for j, state2 in enumerate(self.onsagercalculator.vkinetic.starset.complexStates):
