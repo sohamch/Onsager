@@ -110,7 +110,7 @@ class SdPair(namedtuple('SdPair', "i_s R_s db")):
             if not self.db.iorind == j.state1.iorind:
                 raise ArithmeticError("Incompatible starting dumbbell configurations")
             if not np.allclose(j.state1.R, 0):
-                raise ValueError("Initial dumbbell not at origin unit cell")
+                raise ValueError("Initial dumbbell of jump not at origin unit cell")
             db2 = dumbbell(j.state2.iorind, self.db.R + j.state2.R - j.state1.R)
             return self.__class__(self.i_s, self.R_s, db2)
 
