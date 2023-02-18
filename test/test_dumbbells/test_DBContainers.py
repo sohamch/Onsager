@@ -6,6 +6,147 @@ from crysts import *
 import itertools
 import unittest
 
+class test_DB_structs(unittest.TestCase):
+    def setUp(self):
+        latt = np.array([[0., 0.5, 0.5], [0.5, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
+        DC_Si = crystal.Crystal(latt, [[np.array([0., 0., 0.]), np.array([0.25, 0.25, 0.25])]], ["Si"])
+        famp0 = [np.array([1., 0., 0.]) * 0.145]
+        family = [famp0]
+        self.pdbcontainer = crystal.pureDBContainer(DC_Si, 0, family)
+        self.mdbcontainer = crystal.mixedDBContainer(DC_Si, 0, family)
+
+        iorInd_test = 0
+        for iorInd in range(len(self.pdbcontainer.iorlist)):
+            i, o = self.pdbcontainer.iorlist[iorInd]
+            if np.allclose(o, famp0[0]) or np.allclose(o, -famp0[0]):
+                iorInd_test = iorInd
+
+        print(self.pdbcontainer.iorlist[iorInd_test])
+        self.iorInd_test = iorInd_test
+        self.Rdb_test = np.random.randint(0, 5, 3)
+
+    def test_dumbbells(self):
+        db_test = dumbbell(self.iorInd_test, self.Rdb_test)
+        db_test_2 = dumbbell(self.iorInd_test, self.Rdb_test + 2) # change the lattice position
+        db_test_3 = dumbbell(self.iorInd_test + 1, self.Rdb_test) # change the site, orientation index
+        db_test_4 = db_test_2 - np.array([2,2,2], dtype=int)  # translate db_test2 back to check addition
+
+        self.assertNotEqual(db_test_2, db_test)
+        self.assertNotEqual(db_test_3, db_test)
+        self.assertEqual(db_test_4, db_test)
+
+    def test_SdPairs(self):
+        db_test = dumbbell(self.iorInd_test, self.Rdb_test)
+
+        i_s_test, R_s_test = 0, np.array([0, 0, 0])
+        i_s_test_2 = 1
+        R_s_test_2 = np.array([0, 0, 2])
+
+        pair1 = SdPair(i_s_test, R_s_test, db_test)
+        db_test_2 = dumbbell(self.iorInd_test, self.Rdb_test + R_s_test_2)
+        pair1_trans = SdPair(i_s_test, R_s_test_2, db_test_2)
+
+        pair2 = SdPair(i_s_test_2, R_s_test, db_test)
+        pair3 = SdPair(i_s_test_2, R_s_test_2, db_test)
+        pair4 = SdPair(i_s_test_2, R_s_test_2, db_test_2)
+
+        self.assertEqual(pair1, pair1)
+        self.assertNotEqual(pair1, pair2)
+        self.assertNotEqual(pair1, pair3)
+        self.assertNotEqual(pair1, pair4)
+
+        # check for additions
+        self.assertEqual(pair1, pair1_trans - np.array([0, 0, 2]), msg="found \n{} \n {}".format(pair1, pair1_trans))
+
+    def test_Jumps(self):
+        # first, let's check dumbbell jumps
+        db_test = dumbbell(self.iorInd_test, self.Rdb_test)
+        db_test_2 = dumbbell(self.iorInd_test, self.Rdb_test + 2)
+
+        jmp = jump(db_test, db_test_2, -1, 1)
+        jmpNeg = -jmp
+
+        self.assertEqual(jmpNeg.state1, db_test_2)
+        self.assertEqual(jmpNeg.state2, db_test)
+        self.assertEqual(jmpNeg.c1, 1)
+        self.assertEqual(jmpNeg.c2, -1)
+        self.assertNotEqual(jmp, jmpNeg)
+
+        # test adding jumps to pairs
+        i_s_test, R_s_test = 0, np.array([0, 0, 0])
+
+        pair1 = SdPair(i_s_test, R_s_test, db_test)
+        # In jmp, the dumbbell is not at R=0
+        with self.assertRaises(ValueError):
+            pair2 = pair1.addjump(jmp)
+
+        jmp = jump(db_test - db_test.R, db_test_2, -1, 1)
+        pair2 = pair1.addjump(jmp)
+        # check that solute does not move
+        self.assertEqual(pair1.i_s, pair2.i_s)
+        self.assertTrue(np.all(pair1.R_s == pair2.R_s))
+
+        # check the final db location
+        self.assertEqual(pair2.db.iorind, db_test_2.iorind)
+        self.assertTrue(np.all(pair2.db.R == db_test_2.R + db_test.R))
+
+        db_test_wrong = dumbbell(self.iorInd_test + 3, self.Rdb_test)
+        j2 = jump(db_test_wrong - db_test_wrong.R, db_test, -1, 1)
+        with self.assertRaises(ArithmeticError):
+            pair2 = pair1.addjump(j2)
+
+    def test_Connectors(self):
+        # first, let's check dumbbell jumps
+        db_test = dumbbell(self.iorInd_test, np.array([0, 0, 0]))
+        db_test_2 = dumbbell(self.iorInd_test + 3, self.Rdb_test)
+
+        with self.assertRaises(ValueError):
+            conn = connector(db_test_2, db_test)
+
+        conn = connector(db_test, db_test_2)
+        conn_neg = -conn
+        self.assertEqual(conn_neg.state1, db_test_2 - db_test_2.R)
+        self.assertEqual(conn_neg.state2, db_test - db_test_2.R)
+
+        # test connector creation by xor-ing
+        i_s_test, R_s_test = 0, np.array([0, 0, 0])
+        i_s_test_2 = 1
+        R_s_test_2 = np.array([0, 0, 2])
+
+        pair1 = SdPair(i_s_test, R_s_test, db_test)
+        pair2 = SdPair(i_s_test_2, R_s_test_2, db_test_2)
+
+        with self.assertRaises(ArithmeticError):
+            c1 = pair1 ^ pair2
+
+        pair2 = SdPair(i_s_test, R_s_test_2, db_test_2)
+        with self.assertRaises(ArithmeticError):
+            c1 = pair1 ^ pair2
+
+        pair2 = SdPair(i_s_test_2, R_s_test, db_test_2)
+        with self.assertRaises(ArithmeticError):
+            c1 = pair1 ^ pair2
+
+        pair2 = SdPair(i_s_test, R_s_test, db_test_2)
+
+        c1 = pair1 ^ pair2
+        c2 = pair2 ^ pair1
+        self.assertEqual(c1, -c2)
+
+    def test_gops(self):
+
+        # test the group operations on the structures one by one
+        # first, make a container
+        famp0 = [np.array([1., 0., 0.]) / np.linalg.norm(np.array([1., 0., 0.])) * 0.126]
+        family = [famp0]
+        self.pdbcontainer = pureDBContainer(cube, 0, family)
+        self.mdbcontainer = mixedDBContainer(cube, 0, family)
+        jset0 = self.pdbcontainer.jumpnetwork(0.3, 0.01, 0.01)
+        jset2 = self.mdbcontainer.jumpnetwork(0.3, 0.01, 0.01)
+        self.crys_stars = DBStarSet(self.pdbcontainer, self.mdbcontainer, jset0, jset2, 2)
+
+        # Then take
+
 
 class test_statemaking(unittest.TestCase):
     def setUp(self):
