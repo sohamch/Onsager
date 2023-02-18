@@ -1492,7 +1492,8 @@ class DBStarSet(object):
 
     def jumpnetwork_omega1(self):
         """
-        Builds the omega-1 jump network between the complex states that have been considered in the starset.
+        Builds the omega-1 jump network from the omega_0 jump network between the complex states that have been
+        considered in the starset.
         Only jumps between states that have been considered within the starset are allowed to be present.
         Also, omega-1 jumps do not move the solute.
 
@@ -1502,12 +1503,13 @@ class DBStarSet(object):
                 complex states within the starset.
 
                 - jumpindexed - (list of lists of tuples) indexed version of the jumpnetwork, containing tuples of the form
-                (i, j), dx - where i and j denote the indices of the initial and final states in complexIndexdict and dx
+                (i, j), dx - where i and j denote the indices of the initial and final states and dx
                 is the site-to-site distance for the jump.
 
-                - jtags -
+                - jtags - dictionary of arrays containing initial and final states of dumbbell jumps. This is used in
+                non-local relaxation vector calculations.
 
-            jumptype
+            - jumptype - list mapping back the omega_1 jumps to omega_0 jumps.
         """
         jumpnetwork = []
         jumpindexed = []
@@ -1604,6 +1606,27 @@ class DBStarSet(object):
         return (jumpnetwork, jumpindexed, jtags), jumptype
 
     def jumpnetwork_omega34(self, cutoff, solv_solv_cut, solt_solv_cut, closestdistance):
+        """
+         Builds the omega_4 and omega_3 jump networks between the complex states jumping to mixed dumbbells and vice versa.
+         Parameters:
+             - cutoff - the cutoff distance for the jump.
+             - solv_solv_cut - collision threshold distance between two solvent atoms.
+             - solt_solv_cut - collision threshold distance between the solute and a solvent atom.
+
+         Returns:
+             3 tuples (T1, T2, T3).
+             T1 contains both omega4 and omega3 jumps together. T2 has omega4 and T3 omega_3 jumps
+             respectively.
+             Each elemnet of T1, T2 and T3 correspond to:
+                 - jumpnetwork - (list of lists of "jump" objects) - The even jumps are omega_4 jumps in T1, and the odd ones omega_3
+
+                 - jumpindexed - indexed version of the jumpnetworks, containing tuples of the form (i, j), dx
+                 Note - The indices for solute-pure dumbbell complexes are indexed found in complexIndexdict
+                 and that of the mixed dumbbells in the mixedindexdict dictionaries.
+
+                 - jtags - dictionary of arrays containing initial and final states of dumbbell jumps. This is used in
+                 non-local relaxation vector calculations.
+         """
         # building omega_4 -> association - c2=-1 -> since solvent movement is tracked
         # cutoff required - solute-solvent as well as solvent solvent
         alljumpset_omega4 = set([])
@@ -1764,6 +1787,9 @@ class DBVectorStars(object):
         """
         Follows almost the same as that for solute-vacancy case. Only generalized to keep the state
         under consideration unchanged.
+        Parameters:
+            - starset - the symmetry grouped list of lists of states.
+        Generates the full set of basis vectors for each state in the starset
         """
         self.starset = None
         if starset.Nshells == 0: return
@@ -2172,7 +2198,13 @@ class DBVectorStars(object):
     def rateexpansion(self, jumpnetwork_omega1, jumptype, jumpnetwork_omega34):
         """
         Implements expansion of the jump rates in terms of the basis function of the vector stars.
-        (Note to self) - Refer to earlier notes for details.
+        Parameters:
+            jumpnetwork_omega1 - the omega_1 jump network
+            jumptype - the omega_0 jump type that gives rise to a omega_1 jump type (see jumpnetwork_omega1 function
+            in stars.py module)
+            jumpnetwork_omega34 - the omega_4 and omega_3 jump networks.
+        Returns:
+            rateexpansion and escape rate expansions for omega0, omega1, omega2, omega3 and omega4 jumps
         """
         # See my slides of Sept. 10 for diagram
         rate0expansion = np.zeros((self.Nvstars_pure, self.Nvstars_pure, len(self.starset.jnet0)))
@@ -2261,7 +2293,8 @@ class DBVectorStars(object):
         """
         computes the outer product tensor to perform 'bias *outer* gamma', i.e., the correlated part in the vector
         star basis.
-        :return: outerprod, dimxdimxNvstarsxNvstars outer product tensor.
+        Returns:
+            - outerprod: dimxdimxNvstarsxNvstars outer product tensor.
         """
         # print("Building outer product tensor")
         outerprod = np.zeros((self.crys.dim, self.crys.dim, self.Nvstars, self.Nvstars))
