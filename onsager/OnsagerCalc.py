@@ -2463,7 +2463,7 @@ class dumbbellMediated():
         We need them to be unshifted to be able to normalize the state probabilities, which requires complex and
         mixed dumbbell energies to be with respect to the same reference. Shifting with their respective minimum values
         disturbs this.
-        Wherever shifting is required, we'll do it there.
+        Wherever shifting is required, it is done in-place.
 
         bFSdb - beta*ene_Sdb[i] - ln(pre_Sdb[i]) [i=1,2...,mixedstartindex](binding)] excess free energy of interaction
         between a solute and a pure dumbbell in it's vicinity. This must be non-zero only for states within the
@@ -2476,11 +2476,6 @@ class dumbbellMediated():
         bFT3[i] = beta*eneT3[i] - len(preT3[i]) -> i = 1,2..,N_omega3 - Shifted
         bFT4[i] = beta*eneT4[i] - len(preT4[i]) -> i = 1,2..,N_omega4 - Shifted
         # See the preene2betaene function to see what the shifts are.
-        Return:
-            L_aa, L_bb, L_ab - needs to be multiplied by Cs*C_db/KT
-            Note - L_bb contains local jumps and contribution from mixed dumbbell space.
-            L0bb - contains non-local contribution to solvent diffusion. Needs to be multiplied by C_db/KT.
-            Note the net solvent transport coefficient is (C_db*L0bb/kT + Cs*C_db*L_bb/kT)
         """
         if not len(bFSdb) == self.thermo.mixedstartindex:
             raise TypeError("Interaction energies must be present for all and only all thermodynamic shell states.")
