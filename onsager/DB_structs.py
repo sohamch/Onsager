@@ -38,12 +38,11 @@ class dumbbell(namedtuple('dumbbell', 'iorind R')):
         if not i_new == container.iorlist[gdumb.indexmap[0][self.iorind]][0]:
             raise ValueError("Gdumb and G not consistent")
         newind = gdumb.indexmap[0][self.iorind]
-        return self.__class__(newind, R_new)
-        # if pure:
-        #     flipind = container.gflip(gdumb, self.iorind)
-        #     return self.__class__(newind, R_new), flipind
-        # else:
-        #     return self.__class__(newind, R_new)
+        if pure:
+            flipind = container.gflip(gdumb, self.iorind)
+            return self.__class__(newind, R_new), flipind
+        else:
+            return self.__class__(newind, R_new)
 
     def __add__(self, other):
         if not isinstance(other, np.ndarray):

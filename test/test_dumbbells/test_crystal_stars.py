@@ -30,7 +30,7 @@ class test_StarSet(unittest.TestCase):
                 repr = star[0]
                 self.assertTrue(np.array_equal(repr.R, Zint), msg="{} != {}".format(repr.R, Zint))
                 for gdumb in crys_stars.pdbcontainer.G:
-                    stnew = repr.gop(crys_stars.pdbcontainer, gdumb)
+                    stnew = repr.gop(crys_stars.pdbcontainer, gdumb)[0]
                     stnew -= stnew.R
                     self.assertTrue(stnew in star, msg="{}".format(crys_stars.pdbcontainer.iorlist))
 
@@ -61,7 +61,7 @@ class test_StarSet(unittest.TestCase):
                 considered_already = set([])
 
                 for gdumb in crys_stars.pdbcontainer.G:
-                    stnew = repr.gop(crys_stars.pdbcontainer, gdumb)
+                    stnew = repr.gop(crys_stars.pdbcontainer, gdumb)[0]
                     stnew -= stnew.R_s
                     self.assertTrue(stnew in star)
                     self.assertTrue(stnew in crys_stars.complexStates)
@@ -222,7 +222,7 @@ class test_StarSet(unittest.TestCase):
                 repr = star[0]
                 considered_already = set([])
                 for gdumb in crys_stars.pdbcontainer.G:
-                    stnew = repr.gop(crys_stars.pdbcontainer, gdumb)
+                    stnew = repr.gop(crys_stars.pdbcontainer, gdumb)[0]
                     stnew -= stnew.R_s
                     self.assertTrue(stnew in star)
                     considered_already.add(stnew)
