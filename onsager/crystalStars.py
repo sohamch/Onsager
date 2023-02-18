@@ -1146,9 +1146,9 @@ class VectorStarSet(object):
 
 class DBStarSet(object):
     """
-    class to form the crystal stars, with shells indicated by the number of jumps.
-    Almost exactly similar to CrystalStars.StarSet except now includes orientations.
+    class to form the crystal stars of solute-dumbbell states, with shells indicated by the number of jumps.
     The minimum shell (Nshells=0) is composed of dumbbells situated atleast one jump away.
+    Contains mixed dumbbell states as well.
     """
 
     def __init__(self, pdbcontainer, mdbcontainer, jnetwrk0, jnetwrk2, Nshells=None):
@@ -1156,21 +1156,9 @@ class DBStarSet(object):
         Parameters:
         pdbcontainer,mdbcontainer:
             -containers containing the pure and mixed dumbbell information respectively
-        jnet0,jnet2 - jumpnetworks in pure and mixed dumbbell spaces respectively.
+        jnetwrk0, jnetwrk2: jumpnetworks in pure and mixed dumbbell spaces respectively.
             Note - must send in both as pair states and indexed.
         Nshells - number of thermodynamic shells. Minimum - one jump away - corresponds to Nshells=0
-
-        Index objects contained in the starset
-        All the indexing are done into the following four lists
-        ->pdbcontainer.iorlist, mdbcontainer.iorlist - the list of (site, orientation) tuples allowed for pure and mixed dumbbells respectively.
-        ->complexStates,mixedstates - the list SdPair objects, containing the complex and mixed dumbbells that make up the starset
-
-        --starindexed -> gives the indices to the states list of the states stored in the starset
-        --complexIndex, mixedindex -> tells us which star (via it's index in the pure(or mixed)states list) a state belongs to.
-        --complexIndexdict, mixedindexdict -> tell us given a pair state, what is its index in the states list and the starset, as elements of a 2-tuple.
-        --complexStatesToContainer, mixedStatesToContainer -> tell us the index of the (i,o) of a dumbbell in a SdPair in pure/mixedstates in the
-        respective iorlists.
-
         """
         # check that we have the same crystal structures for pdbcontainer and mdbcontainer
         if not np.allclose(pdbcontainer.crys.lattice, mdbcontainer.crys.lattice):
@@ -1216,13 +1204,28 @@ class DBStarSet(object):
             self.generate(Nshells)
 
     def _sortkey(self, entry):
-
+        """
+        A key function to compute solute-dumbbell distances to sort the crystal stars.
+        Parameter:
+            entry : SdPair object
+        Returns:
+            (float) the distance between the solute and dumbbell sites.
+        """
         sol_pos = self.crys.unit2cart(entry.R_s, self.crys.basis[self.chem][entry.i_s])
         db_pos = self.crys.unit2cart(entry.db.R,
                                      self.crys.basis[self.chem][self.pdbcontainer.iorlist[entry.db.iorind][0]])
         return np.dot(db_pos - sol_pos, db_pos - sol_pos)
 
     def genIndextoContainer(self, complexStates, mixedstates):
+        """
+        Function to get the (i, or) index of the dumbbells in their containers
+        Parameters:
+            complexStates : list of solute-pure dumbbell complex states as SdPair objects.
+            mixedstates : list of mixed dumbbells as SdPair objects.
+        Returns:
+            pureDict, mixedDict : SdPair object -> (i, or) dicts containing the indices of the pure and mixed states
+            in their respective containers.
+        """
         pureDict = {}
         mixedDict = {}
         for st in complexStates:
@@ -1235,6 +1238,33 @@ class DBStarSet(object):
         return pureDict, mixedDict
 
     def generate(self, Nshells):
+        """
+        Generate the set of all solute-dumbbell states within a cuttoff shell.
+
+        Also indexes the states contained in the starset
+        All the indexing are done into the following lists
+        ->complexStates, mixedstates - lists SdPair objects, containing the complex and mixed dumbbells that make up the starset.
+        States are assgined indices based on their position in these lists.
+
+        ->stars, starindexed -> contain symmetry grouped lists of states, and the corresponding indexed version.
+        --complexIndexdict, mixedindexdict -> tell us the location of a state within the starset
+        Example - if the "i^th" group of states (stars[i]) contains the state "s" which is the j^th state in "complexStates",
+        then complexIndexdict[s] = (j, i)
+
+        Corresponding indices are also built for pure dumbbells.
+        ->bareStates - list of dumbbell objects containing the pure dumbbells in a unit cell.
+        ->barePeriodicStars, bareStarindexed - symmetry grouped pure dumbbell objects that periodically repeat in the lattice.
+                              The corresponding (i, or) version can also be found in the "symorlist" and "symIndlist"
+                              of the pure dumbbell container
+
+        ->bareindexdict - gives the symmetry position and position within the symmetry list in barePeriodicStars for a pure dumbbell.
+
+        Parameters:
+            Nshells : number of shells to look at - the shells are counted in terms of the jumps.
+            Example - Nshells = 2 indicated 1nn of 1nn sites from the solute will be considered.
+            All dumbbell orientations are considered for every site to generate the states.
+        """
+
         # Return nothing if Nshells are not specified
         if Nshells is None:
             return
@@ -1461,6 +1491,24 @@ class DBStarSet(object):
         self.starindexed = starIndexnew
 
     def jumpnetwork_omega1(self):
+        """
+        Builds the omega-1 jump network between the complex states that have been considered in the starset.
+        Only jumps between states that have been considered within the starset are allowed to be present.
+        Also, omega-1 jumps do not move the solute.
+
+        Returns:
+            - 3-tuple containing:
+                - jumpnetwork - (list of lists of "jump" objects) the symmetry grouped jumps between solute-pure dumbbell
+                complex states within the starset.
+
+                - jumpindexed - (list of lists of tuples) indexed version of the jumpnetwork, containing tuples of the form
+                (i, j), dx - where i and j denote the indices of the initial and final states in complexIndexdict and dx
+                is the site-to-site distance for the jump.
+
+                - jtags -
+
+            jumptype
+        """
         jumpnetwork = []
         jumpindexed = []
         initstates = []  # list of dicitionaries that store numpy arrays of the form +1 for initial state, -1 for final state
@@ -1513,8 +1561,7 @@ class DBStarSet(object):
 
                         # remove redundant rotations.
                         if np.allclose(DB_disp(self.pdbcontainer, newlist[0].state1, newlist[0].state2), np.zeros(self.crys.dim),
-                                       atol=self.pdbcontainer.crys.threshold)\
-                                and newlist[0].state1.i_s == newlist[0].state2.i_s:
+                                       atol=self.pdbcontainer.crys.threshold):
                             for jind in range(len(newlist)-1, -1, -1):
                                 # start from the last, so we don't skip elements while removing.
                                 j = newlist[jind]
