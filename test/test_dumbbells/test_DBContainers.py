@@ -716,6 +716,7 @@ class test_2d(unittest.TestCase):
     def test_dbStates(self):
         # check that symmetry analysis is correct
         dbstates = crystal.pureDBContainer(self.crys, 0, self.family)
+        print(len(dbstates.iorlist))
         self.assertEqual(len(dbstates.symorlist), 1)
         # check that every (i,or) set is accounted for
         sm = 0
@@ -739,12 +740,23 @@ class test_2d(unittest.TestCase):
                         self.assertEqual(gdumb.indexmap[0][idx1], idx2, msg="{}, {}".format(gdumb.indexmap[0][idx1], idx2))
                 self.assertEqual(count, 1)
 
-        # test_indexedsymlist
-        for i1, symindlist, symstatelist in zip(itertools.count(), dbstates.symIndlist, dbstates.symorlist):
-            for stind, state in zip(symindlist, symstatelist):
-                st_iorlist = dbstates.iorlist[stind]
-                self.assertEqual(st_iorlist[0], state[0])
-                self.assertTrue(np.allclose(st_iorlist[1], state[1], atol=dbstates.crys.threshold))
+                # test_indexedsymlist
+            for i1, symindlist, symstatelist in zip(itertools.count(), dbstates.symIndlist, dbstates.symorlist):
+                for stind, state in zip(symindlist, symstatelist):
+                    st_iorlist = dbstates.iorlist[stind]
+                    self.assertEqual(st_iorlist[0], state[0])
+                    self.assertTrue(np.all(st_iorlist[1] == state[1]))
+                    self.assertEqual(dbstates.invmap[stind], i1)
+
+            # test indexing
+            for idx, (i, o) in enumerate(dbstates.iorlist):
+                idxNew = dbstates.getIndex((i, o))
+                self.assertEqual(idxNew, idx)
+                idxNew = dbstates.getIndex((i, -o))
+                self.assertEqual(idxNew, idx)  # check that negative is accounted for
+
+                db = dumbbell(idx, np.array([3, 3]))
+                self.assertEqual(dbstates.db2ind(db), idx)
 
     def test_jnet0(self):
         # set up the container
@@ -776,6 +788,25 @@ class test_2d(unittest.TestCase):
                 print(jmp)
         self.assertEqual(len(jtest), 4)
 
+        # check that no rotations occur here - since 180 flips are not taken into account
+        count = 0
+        checked = 0
+        print(len(jset))
+        for jlist in jset:
+            for j in jlist:
+                (i1, o1) = pdbcontainer.iorlist[j.state1.iorind]
+                (i2, o2) = pdbcontainer.iorlist[j.state2.iorind]
+                R1 = j.state1.R
+                R2 = j.state2.R
+                dx_explicit = pdbcontainer.crys.pos2cart(R2, (pdbcontainer.chem, i2)) - \
+                              pdbcontainer.crys.pos2cart(R1, (pdbcontainer.chem, i1))
+                checked += 1
+                if np.allclose(dx_explicit, 0):
+                    count += 1
+
+        print(checked)
+        self.assertEqual(count, 0)
+        self.assertEqual(checked, 16)
 
         # test_indices
         # First check if they have the same number of lists and elements
@@ -836,7 +867,17 @@ class test_2d(unittest.TestCase):
         for symind, symIndlist, symstlist in zip(itertools.count(), mstates.symIndlist, mstates.symorlist):
             for idx, state in zip(symIndlist, symstlist):
                 self.assertEqual(mstates.iorlist[idx][0],state[0])
-                self.assertTrue(np.allclose(mstates.iorlist[idx][1], state[1], atol=mstates.crys.threshold))
+                self.assertTrue(np.all(mstates.iorlist[idx][1] == state[1]))
+                self.assertEqual(mstates.invmap[idx], symind)
+
+        for idx, (i, o) in enumerate(mstates.iorlist):
+            idxNew = mstates.getIndex((i, o))
+            self.assertEqual(idxNew, idx)
+            idxNew = mstates.getIndex((i, -o))
+            self.assertNotEqual(idxNew, idx) # check that negative is treated differently
+
+            db = dumbbell(idx, np.array([3,3]))
+            self.assertEqual(mstates.db2ind(db), idx)
 
     def test_jnet2(self):
         # set up the container
