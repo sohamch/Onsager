@@ -1311,7 +1311,7 @@ class DBStarSet(object):
             newstar = []
             newstar_index = []
             for gdumb in self.pdbcontainer.G:
-                newstate = state.gop(self.pdbcontainer, gdumb)[0]
+                newstate = state.gop(self.pdbcontainer, gdumb)
                 newstate = newstate - newstate.R_s  # Shift the solute back to the origin unit cell.
                 if newstate in self.stateset:  # Check if this state is allowed to be present.
                     if not newstate in allset:  # Check if this state has already been considered.
@@ -1734,7 +1734,7 @@ class DBVectorStars(object):
             glist = []
             # Find group operations that leave state unchanged
             for gdumb in starset.pdbcontainer.G:
-                pairnew = pair0.gop(starset.pdbcontainer, gdumb)[0]
+                pairnew = pair0.gop(starset.pdbcontainer, gdumb)
                 pairnew = pairnew - pairnew.R_s
                 if pairnew == pair0:
                     glist.append(starset.pdbcontainer.G_crys[gdumb])  # Although appending gdumb itself also works
@@ -1755,7 +1755,7 @@ class DBVectorStars(object):
                     veclist = []
                     for pairI in star:
                         for gdumb in starset.pdbcontainer.G:
-                            pairnew = pair0.gop(starset.pdbcontainer, gdumb)[0]
+                            pairnew = pair0.gop(starset.pdbcontainer, gdumb)
                             pairnew = pairnew - pairnew.R_s  # translate solute back to origin
                             # This is because the vectors associated with a state are translationally invariant.
                             # Wherever the solute is, if the relative position of the solute and the solvent is the
