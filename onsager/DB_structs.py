@@ -102,25 +102,16 @@ class SdPair(namedtuple('SdPair', "i_s R_s db")):
         """
         return self.i_s == container.iorlist[self.db.iorind][0] and np.allclose(self.R_s, self.db.R, atol=1e-8)
 
-    def addjump(self, j, mixed=False):
+    def addjump(self, j):
 
-        if not mixed:
-            if isinstance(j.state1, self.__class__):
-                raise TypeError("Only dumbbell -> dumbbell transitions can be added to complexes")
-            if not self.db.iorind == j.state1.iorind:
-                raise ArithmeticError("Incompatible starting dumbbell configurations")
-            if not np.allclose(j.state1.R, 0):
-                raise ValueError("Initial dumbbell of jump not at origin unit cell")
-            db2 = dumbbell(j.state2.iorind, self.db.R + j.state2.R - j.state1.R)
-            return self.__class__(self.i_s, self.R_s, db2)
-
-        else: #if mixed:
-            if not isinstance(j.state1, SdPair):
-                raise TypeError("Only pair -> pair transitions can be added to mixed dumbbells")
-            if not self.db.iorind == j.state1.db.iorind:
-                raise ArithmeticError("Incompatible starting dumbbell configurations")
-            db2 = dumbbell(j.state2.db.iorind, self.db.R + j.state2.db.R - j.state1.db.R)
-            return SdPair(j.state2.i_s, db2.R, db2)
+        if isinstance(j.state1, self.__class__):
+            raise TypeError("Only dumbbell -> dumbbell transitions can be added to complexes")
+        if not self.db.iorind == j.state1.iorind:
+            raise ArithmeticError("Incompatible starting dumbbell configurations")
+        if not np.allclose(j.state1.R, 0):
+            raise ValueError("Initial dumbbell of jump not at origin unit cell")
+        db2 = dumbbell(j.state2.iorind, self.db.R + j.state2.R - j.state1.R)
+        return self.__class__(self.i_s, self.R_s, db2)
 
     def __add__(self, other):
 
