@@ -237,6 +237,7 @@ class test_statemaking(unittest.TestCase):
     def test_dbStates(self):
         # check that symmetry analysis is correct
         dbstates = crystal.pureDBContainer(self.crys, 0, self.family)
+        print(len(dbstates.iorlist))
         self.assertEqual(len(dbstates.symorlist), 1)
         # check that every (i,or) set is accounted for
         sm = 0
@@ -279,7 +280,18 @@ class test_statemaking(unittest.TestCase):
             for stind, state in zip(symindlist, symstatelist):
                 st_iorlist = dbstates.iorlist[stind]
                 self.assertEqual(st_iorlist[0], state[0])
-                self.assertTrue(np.allclose(st_iorlist[1], state[1], atol=dbstates.crys.threshold))
+                self.assertTrue(np.all(st_iorlist[1] == state[1]))
+                self.assertEqual(dbstates.invmap[stind], i1)
+
+        # test indexing
+        for idx, (i, o) in enumerate(dbstates.iorlist):
+            idxNew = dbstates.getIndex((i, o))
+            self.assertEqual(idxNew, idx)
+            idxNew = dbstates.getIndex((i, -o))
+            self.assertEqual(idxNew, idx) # check that negative is accounted for
+
+            db = dumbbell(idx, np.array([3,3,3]))
+            self.assertEqual(dbstates.db2ind(db), idx)
 
     # Test jumpnetwork
     def test_jnet0(self):
@@ -304,6 +316,39 @@ class test_statemaking(unittest.TestCase):
         self.assertEqual(count, 1)  # see that this jump has been taken only once into account
         self.assertEqual(len(jtest), 24)
 
+        o1 = np.array([0.126, 0., 0.])
+        o2 = np.array([0., 0.126, 0.])
+        idx1 = pdbcontainer_cube.getIndex((0, o1))
+        idx2 = pdbcontainer_cube.getIndex((0, o2))
+
+        if np.allclose(o1, pdbcontainer_cube.iorlist[idx1][1]):
+            c1 = 1
+        else:
+            self.assertTrue(np.allclose(o1, -pdbcontainer_cube.iorlist[idx1][1]))
+            c1 = -1
+
+        if np.allclose(o2, pdbcontainer_cube.iorlist[idx2][1]):
+            c2 = 1
+        else:
+            self.assertTrue(np.allclose(o2, -pdbcontainer_cube.iorlist[idx2][1]))
+            c2 = -1
+
+        test_dbi = dumbbell(idx1, np.array([0, 0, 0]))
+        test_dbf = dumbbell(idx2, np.array([0, 0, 0]))
+        count = 0
+        for i, jlist in enumerate(jset_cube):
+            for q, j in enumerate(jlist):
+                if j.state1 == test_dbi:
+                    if j.state2 == test_dbf:
+                        if (j.c1 == c1 and j.c2 == c2) or (j.c1 == -c1 and j.c2 == -c2):
+                            count += 1
+                            jtest = jlist
+        self.assertEqual(count, 1)  # see that this jump has been taken only once into account
+        self.assertEqual(len(jtest), 12)
+
+
+
+
         # Next FCC
         # test this out with FCC
         fcc = crystal.Crystal.FCC(0.55)
@@ -326,6 +371,59 @@ class test_statemaking(unittest.TestCase):
         self.assertEqual(len(jtest), 1)
         # See that there 24 jumps. 24 0->0.
         self.assertEqual(len(jtest[0]), 24)
+
+        o1 = np.array([1., 1., 0.]) * 0.2 / np.sqrt(2)
+        o2 = np.array([-1., 1., 0.]) * 0.2 / np.sqrt(2)
+        idx1 = pdbcontainer_fcc.getIndex((0, o1))
+        idx2 = pdbcontainer_fcc.getIndex((0, o2))
+
+        if np.allclose(o1, pdbcontainer_fcc.iorlist[idx1][1]):
+            c1 = 1
+        else:
+            self.assertTrue(np.allclose(o1, -pdbcontainer_fcc.iorlist[idx1][1]))
+            c1 = -1
+
+        if np.allclose(o2, pdbcontainer_fcc.iorlist[idx2][1]):
+            c2 = 1
+        else:
+            self.assertTrue(np.allclose(o2, -pdbcontainer_fcc.iorlist[idx2][1]))
+            c2 = -1
+
+        test_dbi = dumbbell(idx1, np.array([0, 0, 0]))
+        test_dbf = dumbbell(idx2, np.array([0, 0, 0]))
+        count = 0
+        for i, jlist in enumerate(jset_fcc):
+            for q, j in enumerate(jlist):
+                if j.state1 == test_dbi:
+                    if j.state2 == test_dbf:
+                        if (j.c1 == c1 and j.c2 == c2) or (j.c1 == -c1 and j.c2 == -c2):
+                            count += 1
+                            jtest = jlist
+        self.assertEqual(count, 1)  # see that this jump has been taken only once into account
+        self.assertEqual(len(jtest), 12)
+
+        # check that across all jumps, a rotation jump only occurs once and its equivalent does not occur
+        rotSet = []
+        allJumps = []
+        for jlist in jset_fcc:
+            for j in jlist:
+                allJumps.append(j)
+                (i1, o1) = pdbcontainer_fcc.iorlist[j.state1.iorind]
+                (i2, o2) = pdbcontainer_fcc.iorlist[j.state2.iorind]
+                R1 = j.state1.R
+                R2 = j.state2.R
+                dx_explicit = pdbcontainer_fcc.crys.pos2cart(R2, (pdbcontainer_fcc.chem, i2)) - \
+                              pdbcontainer_fcc.crys.pos2cart(R1, (pdbcontainer_fcc.chem, i1))
+                if np.allclose(dx_explicit, 0):
+                    rotSet.append(j)
+
+        for jrot in rotSet:
+            jequiv = jump(jrot.state1, jrot.state2, -jrot.c1, -jrot.c2)
+            self.assertTrue(jequiv not in rotSet)
+            self.assertTrue(jequiv not in allJumps)
+
+
+
 
         # DC_Si - same symmetry as FCC, except twice the number of jumps, since we have two basis
         # atoms belonging to the same Wyckoff site, in a crystal with the same lattice vectors.
@@ -351,6 +449,58 @@ class test_statemaking(unittest.TestCase):
         # See that there 48 jumps. 24 0->0 and 24 1->1.
         self.assertEqual(len(jtest[0]), 48)
 
+        o1 = np.array([1., 1., 0.]) * 0.2 / np.sqrt(2)
+        o2 = np.array([-1., 1., 0.]) * 0.2 / np.sqrt(2)
+        idx1 = pdbcontainer_si.getIndex((0, o1))
+        idx2 = pdbcontainer_si.getIndex((0, o2))
+
+        if np.allclose(o1, pdbcontainer_si.iorlist[idx1][1]):
+            c1 = 1
+        else:
+            self.assertTrue(np.allclose(o1, -pdbcontainer_si.iorlist[idx1][1]))
+            c1 = -1
+
+        if np.allclose(o2, pdbcontainer_si.iorlist[idx2][1]):
+            c2 = 1
+        else:
+            self.assertTrue(np.allclose(o2, -pdbcontainer_si.iorlist[idx2][1]))
+            c2 = -1
+
+        test_dbi = dumbbell(idx1, np.array([0, 0, 0]))
+        test_dbf = dumbbell(idx2, np.array([0, 0, 0]))
+        count = 0
+        for i, jlist in enumerate(jset_si):
+            for q, j in enumerate(jlist):
+                if j.state1 == test_dbi:
+                    if j.state2 == test_dbf:
+                        if (j.c1 == c1 and j.c2 == c2) or (j.c1 == -c1 and j.c2 == -c2):
+                            count += 1
+                            jtest = jlist
+        self.assertEqual(count, 1)  # see that this jump has been taken only once into account
+        self.assertEqual(len(jtest), 24)
+
+        # check that across all jumps, a rotation jump only occurs once and its equivalent does not occur
+        rotSet = []
+        allJumps = []
+        for jlist in jset_si:
+            for j in jlist:
+                allJumps.append(j)
+                (i1, o1) = pdbcontainer_si.iorlist[j.state1.iorind]
+                (i2, o2) = pdbcontainer_si.iorlist[j.state2.iorind]
+                R1 = j.state1.R
+                R2 = j.state2.R
+                dx_explicit = pdbcontainer_si.crys.pos2cart(R2, (pdbcontainer_si.chem, i2)) - \
+                              pdbcontainer_si.crys.pos2cart(R1, (pdbcontainer_si.chem, i1))
+                if np.allclose(dx_explicit, 0):
+                    rotSet.append(j)
+
+        for jrot in rotSet:
+            jequiv = jump(jrot.state1, jrot.state2, -jrot.c1, -jrot.c2)
+            self.assertTrue(jequiv not in rotSet)
+            self.assertTrue(jequiv not in allJumps)
+
+
+
         # HCP
         Mg = crystal.Crystal.HCP(0.3294, chemistry=["Mg"])
         famp0 = [np.array([1., 0., 0.]) * 0.145]
@@ -372,6 +522,26 @@ class test_statemaking(unittest.TestCase):
                     testlist = jl
         self.assertEqual(len(testlist), 24)
         self.assertEqual(count, 1)
+
+        # check that across all jumps, a rotation jump only occurs once and its equivalent does not occur
+        rotSet = []
+        allJumps = []
+        for jlist in jset_hcp:
+            for j in jlist:
+                allJumps.append(j)
+                (i1, o1) = pdbcontainer_hcp.iorlist[j.state1.iorind]
+                (i2, o2) = pdbcontainer_hcp.iorlist[j.state2.iorind]
+                R1 = j.state1.R
+                R2 = j.state2.R
+                dx_explicit = pdbcontainer_hcp.crys.pos2cart(R2, (pdbcontainer_hcp.chem, i2)) - \
+                              pdbcontainer_hcp.crys.pos2cart(R1, (pdbcontainer_hcp.chem, i1))
+                if np.allclose(dx_explicit, 0):
+                    rotSet.append(j)
+
+        for jrot in rotSet:
+            jequiv = jump(jrot.state1, jrot.state2, -jrot.c1, -jrot.c2)
+            self.assertTrue(jequiv not in rotSet)
+            self.assertTrue(jequiv not in allJumps)
 
         # test_indices
         # First check if they have the same number of lists and elements
@@ -457,7 +627,17 @@ class test_statemaking(unittest.TestCase):
         for symind, symIndlist, symstlist in zip(itertools.count(), mstates.symIndlist, mstates.symorlist):
             for idx, state in zip(symIndlist, symstlist):
                 self.assertEqual(mstates.iorlist[idx][0],state[0])
-                self.assertTrue(np.allclose(mstates.iorlist[idx][1], state[1], atol=mstates.crys.threshold))
+                self.assertTrue(np.all(mstates.iorlist[idx][1] == state[1]))
+                self.assertEqual(mstates.invmap[idx], symind)
+
+        for idx, (i, o) in enumerate(mstates.iorlist):
+            idxNew = mstates.getIndex((i, o))
+            self.assertEqual(idxNew, idx)
+            idxNew = mstates.getIndex((i, -o))
+            self.assertNotEqual(idxNew, idx) # check that negative is treated differently
+
+            db = dumbbell(idx, np.array([3,3,3]))
+            self.assertEqual(mstates.db2ind(db), idx)
 
     def test_mixedjumps(self):
         latt = np.array([[0., 0.5, 0.5], [0.5, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
