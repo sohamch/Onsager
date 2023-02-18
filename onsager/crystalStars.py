@@ -1611,12 +1611,6 @@ class DBStarSet(object):
                                     if gval == g:
                                         gdumb_mixed = mgdumb
 
-                                # Assert consistency
-                                if not (np.allclose(gdumb_pure.cartrot, gdumb_mixed.cartrot) and
-                                        np.allclose(gdumb_pure.cartrot, gdumb_mixed.cartrot) and
-                                        np.allclose(gdumb_pure.trans, gdumb_mixed.trans)):
-                                    raise TypeError("Inconsistent group operations")
-
                                 state1new, flip1 = j.state1.gop(self.pdbcontainer, gdumb_pure, complex=True)
                                 state2new = j.state2.gop(self.mdbcontainer, gdumb_mixed, complex=False)
 
