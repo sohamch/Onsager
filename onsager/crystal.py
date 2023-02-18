@@ -1730,9 +1730,9 @@ class pureDBContainer(object):
         of the orientation is important in that it is used to analzye collisions during atomic jumps. It is recommended
         to use lengths no more than the atomic diameter of the host/solvent atom.
         Parameters:
-            crys : (crystal object) the crystal object
-            chem : (int) the chemistry/sublattice index
-            family : (list of numpy vectors) all the orientations allowed to be taken by the pure dumbbell
+            - crys : (crystal object) the crystal object
+            - chem : (int) the chemistry/sublattice index
+            - family : (list of numpy vectors) all the orientations allowed to be taken by the pure dumbbell
         """
         if not isinstance(family, list):
             raise TypeError("Enter the families as a list of lists")
@@ -1762,8 +1762,8 @@ class pureDBContainer(object):
         Parameters:
              symindlist : (list of list of integers) list symmetry grouped dumbbells indentified by integer indices
         Returns:
-            invmap : a list of integers, as long as the number of dumbbells, containing the symmetry group of each dumbbell.
-            example- invamp[i] gives the symmetry group of the i^th dumbbell.
+            -invmap : a list of integers, as long as the number of dumbbells, containing the symmetry group of each dumbbell.
+                    example- invamp[i] gives the symmetry group of the i^th dumbbell.
         """
         invmap = np.zeros(sum([len(lst) for lst in symindlist]), dtype=int)
         for symind, symlist in enumerate(symindlist):
@@ -1776,10 +1776,8 @@ class pureDBContainer(object):
         Generates complete (i,or) set from given family of orientations, including all symmetry variants.
         Note - an orientation vector and its negative denote the same pure dumbbell, so only one is taken.
 
-        Parameters:
-             None
         Returns:
-            iorlist - the list of dumbbells in a single unit cell, each being denoted by a tuple (i, or) with "i"
+            -iorlist - the list of dumbbells in a single unit cell, each being denoted by a tuple (i, or) with "i"
             being the basis atom index integer and "or" being the orientation bector.
         """
         if not isinstance(self.family, list):
@@ -1830,12 +1828,12 @@ class pureDBContainer(object):
         Creates GroupOp objects with the same matrices as that of a crystal object, but has an index map that corresponds
         to dumbbell states instead of just sites.
         Parameters:
-            crys : the crystal object.
-            chem : the chemistry/sublattice index on which the dumbbells are allowed to diffuse.
-            iorlist : the list of all dumbbells that can occur in a single unit cell.
+            - crys : the crystal object.
+            - chem : the chemistry/sublattice index on which the dumbbells are allowed to diffuse.
+            - iorlist : the list of all dumbbells that can occur in a single unit cell.
         Returns:
-            G : (frozenset) the set of crystal group operations with index map being that of dumbbells.
-            G_crys : (dictionary) keys : GroupOps stored in G, values : corresponding GroupOp of the crystal object.
+            - G : (frozenset) the set of crystal group operations with index map being that of dumbbells.
+            - G_crys : (dictionary) keys : GroupOps stored in G, values : corresponding GroupOp of the crystal object.
         """
         G = []
         G_crys = {}
@@ -1865,8 +1863,8 @@ class pureDBContainer(object):
         Takes in a flat list of (i,or) pairs and groups them according to symmetry.
         "i" stands for basis index of the dumbbell and "or" for orientation.
         Returns:
-            symIorList : list of lists (i, or) tuples grouped by symmetry.
-            symIndlist: contains the integer indices given to each dumbbell in symIorList
+            - symIorList : list of lists (i, or) tuples grouped by symmetry.
+            - symIndlist: contains the integer indices given to each dumbbell in symIorList
         """
 
         # We'll take advantage of the gdumbs we have created
@@ -1908,14 +1906,14 @@ class pureDBContainer(object):
         Makes a jumpnetwork of pure dumbbells within a given distance to be used for omega_0
         and to create the solute-dumbbell stars.
         Parameters:
-            cutoff - maximum jump distance
-            solv_solv_cut - minimum allowable distance between two solvent atoms - to check for collisions
-            closestdistance - minimum allowable distance to check for collisions with other atoms. Can be a single
-            number or a list (corresponding to each sublattice)
+            - cutoff - maximum jump distance
+            - solv_solv_cut - minimum allowable distance between two solvent atoms - to check for collisions
+            - closestdistance - minimum allowable distance to check for collisions with other atoms. Can be a single
+                number or a list (corresponding to each sublattice)
         Returns:
-            jumpnetwork - the symmetrically grouped jumps
-             Each jump is defined as a tuple (db1,db2,c1,c2). See DB_Structs.
-            jumpindices - the jumpnetworks with dbs in pair1 and pair2 indexed to iorset -> (i,j,dx)
+            - jumpnetwork - the symmetrically grouped jumps
+                Each jump is defined as a jump object. See DB_Structs.
+            - jumpindices - the jumpnetworks with dbs in pair1 and pair2 indexed to iorset -> (i,j,dx)
         """
         crys, chem, iorlist = self.crys, self.chem, self.iorlist
 
@@ -2024,9 +2022,9 @@ class pureDBContainer(object):
         """
         get the index of a dumbbell, if it exists (negative orientations accounted for)
         Paramters:
-            t: tuple containing (basis site index, orientation) of the dumbbell
+            - t: tuple containing (basis site index, orientation) of the dumbbell
         Returns:
-            idx (integer) - the index of (i, o) in the iorlist, if it exists.
+            - idx (integer) - the index of (i, o) in the iorlist, if it exists.
         """
         for idx, tup in enumerate(self.iorlist):
             if t[0] == tup[0] and (np.allclose(t[1], tup[1], atol=self.crys.threshold) or
@@ -2038,9 +2036,9 @@ class pureDBContainer(object):
         """
         Returns index of a dumbbell entered as a dumbbell object from DB_Structs.
         Paramters:
-            db: dumbbell object
+            - db: dumbbell object
         Returns:
-            idx : the index of the dumbbell in the (i, or) list. Throws error if not found.
+            - idx : the index of the dumbbell in the (i, or) list. Throws error if not found.
         """
         if not isinstance(db, dumbbell):
             raise TypeError("Input object must be dumbbell")
@@ -2069,9 +2067,9 @@ class mixedDBContainer(pureDBContainer):
         of the orientation is important in that it is used to analzye collisions during atomic jumps. It is recommended
         to use lengths no more than the atomic diameter of the host/solvent atom.
         Parameters:
-            crys : (crystal object) the crystal object
-            chem : (int) the chemistry/sublattice index
-            family : (list of numpy vectors) all the orientations allowed to be taken by the pure dumbbell
+            - crys : (crystal object) the crystal object
+            - chem : (int) the chemistry/sublattice index
+            - family : (list of numpy vectors) all the orientations allowed to be taken by the pure dumbbell
         """
         self.crys = crys
         self.chem = chem
@@ -2126,12 +2124,12 @@ class mixedDBContainer(pureDBContainer):
         For pure dumbbells, positive/negative orientation vectors denote same states.
         However, for mixed dumbbells, they will denote different states.
         Parameters:
-            crys : the crystal object.
-            chem : the chemistry/sublattice index on which the dumbbells are allowed to diffuse.
-            iorlist : the list of all dumbbells that can occur in a single unit cell.
+            - crys : the crystal object.
+            - chem : the chemistry/sublattice index on which the dumbbells are allowed to diffuse.
+            - iorlist : the list of all dumbbells that can occur in a single unit cell.
         Returns:
-            G : (frozenset) the set of crystal group operations with index map being that of dumbbells.
-            G_crys : (dictionary) keys : GroupOps stored in G, values : corresponding GroupOp of the crystal object.
+            - G : (frozenset) the set of crystal group operations with index map being that of dumbbells.
+            - G_crys : (dictionary) keys : GroupOps stored in G, values : corresponding GroupOp of the crystal object.
         """
         G = []
         G_crys = {}
@@ -2157,14 +2155,14 @@ class mixedDBContainer(pureDBContainer):
         Makes a jumpnetwork of mixed dumbbells within a given distance to be used for omega_0
         and to create the solute-dumbbell stars.
         Parameters:
-            cutoff - maximum jump distance
-            solt_solv_cut - minimum allowable distance between solute and solvent atoms - to check for collisions
-            closestdistance - minimum allowable distance to check for collisions with other atoms. Can be a single
-            number or a list (corresponding to each sublattice)
+            - cutoff - maximum jump distance
+            - solt_solv_cut - minimum allowable distance between solute and solvent atoms - to check for collisions
+            - closestdistance - minimum allowable distance to check for collisions with other atoms. Can be a single
+                number or a list (corresponding to each sublattice)
         Returns:
-            jumpnetwork - the symmetrically grouped jumpnetworks (db1,db2, 1, 1)
-            Note - for mixed dumbbells only solute jumps.
-            jumpindices - the jumpnetworks with dbs in pair1 and pair2 indexed to iorset -> (i,j,dx)
+            - jumpnetwork - the symmetrically grouped jumpnetworks of jump objects.
+                Note - for mixed dumbbells only the solute jumps.
+            - jumpindices - the jumpnetworks with dbs in pair1 and pair2 indexed to iorset -> (i,j,dx)
         """
         crys, chem, mset = self.crys, self.chem, self.iorlist
 
@@ -2237,9 +2235,9 @@ class mixedDBContainer(pureDBContainer):
         """
         get the index of a mixed dumbbell, if it exists in the container.
         Paramters:
-            t: tuple containing (basis site index, orientation) of the dumbbell
+            - t: tuple containing (basis site index, orientation) of the dumbbell
         Returns:
-            idx (integer) - the index of (i, o) in the iorlist, if it exists.
+            - idx (integer) - the index of (i, o) in the iorlist, if it exists.
         """
         for idx,tup in enumerate(self.iorlist):
             if t[0]==tup[0] and np.allclose(t[1], tup[1], atol = 1e-8):
