@@ -1735,13 +1735,16 @@ class pureDBContainer(object):
             - family : (list of numpy vectors) all the orientations allowed to be taken by the pure dumbbell
         """
         if not isinstance(family, list):
-            raise TypeError("Enter the families as a list of lists")
+            raise TypeError("Families of orientations need to be entered as a list of lists")
 
-        for vec in family:
-            if not isinstance(vec, np.ndarray):
-                raise TypeError("orientation vectors must be entered as numpy arrays")
-            if not vec.shape[0] == crys.dim:
-                raise ArithmeticError("Array dimension ({}) must be the same as the crystal dimension ({})".format(vec.shape[0], crys.dim))
+        for veclist in family:
+            if not isinstance(family, list):
+                raise TypeError("Familied of orientations at each site need to be entered as a list.")
+            for vec in veclist:
+                if not isinstance(vec, np.ndarray):
+                    raise TypeError("orientation vectors must be entered as numpy arrays")
+                if not vec.shape[0] == crys.dim:
+                    raise ArithmeticError("Array dimension ({}) must be the same as the crystal dimension ({})".format(vec.shape[0], crys.dim))
 
         self.crys = crys
         self.chem = chem
