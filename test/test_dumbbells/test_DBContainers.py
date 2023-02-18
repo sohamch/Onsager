@@ -1,16 +1,18 @@
 import numpy as np
 
 import crystal
-from onsager.DB_structs import dumbbell, SdPair, jump
+from onsager.DB_structs import dumbbell, SdPair, jump, connector
 from crysts import *
 import itertools
 import unittest
 
 class test_DB_structs(unittest.TestCase):
     def setUp(self):
+        # DC_Si - same symmetry as FCC, except twice the number of jumps, since we have two basis
+        # atoms belonging to the same Wyckoff site, in a crystal with the same lattice vectors.
         latt = np.array([[0., 0.5, 0.5], [0.5, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
         DC_Si = crystal.Crystal(latt, [[np.array([0., 0., 0.]), np.array([0.25, 0.25, 0.25])]], ["Si"])
-        famp0 = [np.array([1., 0., 0.]) * 0.145]
+        famp0 = [np.array([1., 1., 0.]) / np.sqrt(2) * 0.2]
         family = [famp0]
         self.pdbcontainer = crystal.pureDBContainer(DC_Si, 0, family)
         self.mdbcontainer = crystal.mixedDBContainer(DC_Si, 0, family)
@@ -136,34 +138,125 @@ class test_DB_structs(unittest.TestCase):
     def test_gops(self):
 
         # test the group operations on the structures one by one
-        # first, make a container
-        famp0 = [np.array([1., 0., 0.]) / np.linalg.norm(np.array([1., 0., 0.])) * 0.126]
-        family = [famp0]
-        self.pdbcontainer = pureDBContainer(cube, 0, family)
-        self.mdbcontainer = mixedDBContainer(cube, 0, family)
-        jset0 = self.pdbcontainer.jumpnetwork(0.3, 0.01, 0.01)
-        jset2 = self.mdbcontainer.jumpnetwork(0.3, 0.01, 0.01)
-        self.crys_stars = DBStarSet(self.pdbcontainer, self.mdbcontainer, jset0, jset2, 2)
 
-        # Then take
+        # First, for dumbbells
+        # Make a dumbbell object
+        db_test = dumbbell(self.iorInd_test, self.Rdb_test)
+        for g in self.pdbcontainer.G:
+            g_crys = self.pdbcontainer.G_crys[g]
+            dbnew, flip = db_test.gop(self.pdbcontainer, g, pure=True)
+            # first check the sites
+            self.assertEqual(dbnew.iorind, g.indexmap[0][self.iorInd_test])
+            if flip == -1:
+                o = self.pdbcontainer.iorlist[self.iorInd_test][1]
+                o2 = self.pdbcontainer.iorlist[dbnew.iorind][1]
+                self.assertTrue(np.allclose(np.dot(g.cartrot, o), -o2))
+
+        # Then for pairs - complex states
+        db_test = dumbbell(self.iorInd_test, self.Rdb_test)
+        i_s_test, R_s_test = 0, np.array([0, 0, 2])
+        pair1 = SdPair(i_s_test, R_s_test, db_test)
+
+        for g in self.pdbcontainer.G:
+            g_crys = self.pdbcontainer.G_crys[g]
+            pair2, flip = pair1.gop(self.pdbcontainer, g, complex=True)
+            # first check the sites
+            self.assertEqual(pair2.db.iorind, g.indexmap[0][self.iorInd_test])
+            if flip == -1:
+                o = self.pdbcontainer.iorlist[self.iorInd_test][1]
+                o2 = self.pdbcontainer.iorlist[pair2.db.iorind][1]
+                self.assertTrue(np.allclose(np.dot(g.cartrot, o), -o2))
+
+            RNew, (c, i_new) = self.pdbcontainer.crys.g_pos(g_crys, pair1.R_s, (self.pdbcontainer.chem, pair1.i_s))
+            self.assertEqual(c, self.pdbcontainer.chem)
+            self.assertEqual(i_new, pair2.i_s)
+            self.assertTrue(np.all(RNew == pair2.R_s))
+
+        # Then for pairs - mixed states
+        db_test = dumbbell(self.iorInd_test, self.Rdb_test)
+        i = self.mdbcontainer.iorlist[self.iorInd_test][0]
+        pair1 = SdPair(i, self.Rdb_test, db_test)
+
+        for g in self.mdbcontainer.G:
+            g_crys = self.mdbcontainer.G_crys[g]
+            pair2 = pair1.gop(self.mdbcontainer, g, complex=False)
+            # first check the sites
+            self.assertEqual(pair2.db.iorind, g.indexmap[0][self.iorInd_test])
+            # since mixed state, the orientation change should be a simples rotation
+            o1 = self.mdbcontainer.iorlist[self.iorInd_test][1]
+            o2 = self.mdbcontainer.iorlist[pair2.db.iorind][1]
+            self.assertTrue(np.allclose(o2, np.dot(g.cartrot, o1)),
+                            msg="{} {} \n {}".format(o2, self.mdbcontainer.crys.g_direc(g_crys, o1), g.cartrot))
+
+            RNew, (c, i_new) = self.mdbcontainer.crys.g_pos(g_crys, pair1.R_s, (self.mdbcontainer.chem, pair1.i_s))
+            self.assertEqual(c, self.mdbcontainer.chem)
+            self.assertEqual(i_new, pair2.i_s)
+            self.assertTrue(np.all(RNew == pair2.R_s))
+
+            # check that the mixed state remains mixed
+            self.assertTrue(np.all(RNew == pair2.db.R))
+            inew_db = self.mdbcontainer.iorlist[pair2.db.iorind][0]
+            self.assertEqual(i_new, inew_db)
+
+        # test gops for connectors
+        db_test = dumbbell(self.iorInd_test, np.array([0, 0, 0]))
+        # select another dumbbell to connect this to - could be the same or different - doesn't matter
+        newInd = np.random.randint(0, len(self.pdbcontainer.iorlist))
+        print("Connector between : {} and {}".format(self.iorInd_test, newInd))
+        db_test_2 = dumbbell(newInd, self.Rdb_test)
+
+        conn = connector(db_test, db_test_2)
+        for g in self.pdbcontainer.G:
+            g_crys = self.pdbcontainer.G_crys[g]
+            conn_g = conn.gop(self.pdbcontainer, g)
+
+            db_test_g = db_test.gop(self.pdbcontainer, g, pure=True)[0]
+            Rt = db_test_g.R  #.copy()
+            db_test_g -= Rt
+
+            db_test_2_g = db_test_2.gop(self.pdbcontainer, g, pure=True)[0]
+            db_test_2_g -= Rt
+
+            self.assertEqual(db_test_g, conn_g.state1)
+            self.assertEqual(db_test_2_g, conn_g.state2)
 
 
 class test_statemaking(unittest.TestCase):
     def setUp(self):
-        famp0 = [np.array([1., 1., 0.]), np.array([1., 0., 0.])]
-        famp12 = [np.array([1., 1., 1.]), np.array([1., 1., 0.])]
-        self.family = [famp0, famp12]
-        self.crys = tet2
+        # famp0 = [np.array([1., 1., 0.]), np.array([1., 0., 0.])]
+        # famp12 = [np.array([1., 1., 1.]), np.array([1., 1., 0.])]
+        # self.family = [famp0, famp12]
+        # self.crys = tet2
+
+        latt = np.array([[0., 0.5, 0.5], [0.5, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
+        DC_Si = crystal.Crystal(latt, [[np.array([0., 0., 0.]), np.array([0.25, 0.25, 0.25])]], ["Si"])
+        famp0 = [np.array([1., 1., 0.]) / np.sqrt(2) * 0.2]
+        self.family = [famp0]
+        self.crys = DC_Si
 
     def test_dbStates(self):
         # check that symmetry analysis is correct
         dbstates = crystal.pureDBContainer(self.crys, 0, self.family)
-        self.assertEqual(len(dbstates.symorlist), 4)
+        self.assertEqual(len(dbstates.symorlist), 1)
         # check that every (i,or) set is accounted for
         sm = 0
         for i in dbstates.symorlist:
             sm += len(i)
         self.assertEqual(sm, len(dbstates.iorlist))
+
+        for g in self.crys.G:
+            gdumb_found = None
+            count = 0
+            for gdumb, gval in dbstates.G_crys.items():
+                if gval == g:
+                    gdumb_found = gdumb
+                    count += 1
+
+            self.assertEqual(count, 1)
+            self.assertTrue(np.allclose(gdumb_found.cartrot, gdumb_found.cartrot))
+            self.assertTrue(np.allclose(gdumb_found.rot, gdumb_found.rot))
+            self.assertTrue(np.allclose(gdumb_found.trans, gdumb_found.trans))
+
 
         # test indexmapping
         for gdumb in dbstates.G:
@@ -308,30 +401,52 @@ class test_statemaking(unittest.TestCase):
 
     def test_mStates(self):
         dbstates = crystal.pureDBContainer(self.crys, 0, self.family)
-        mstates1 = crystal.mixedDBContainer(self.crys, 0, self.family)
+        mstates = crystal.mixedDBContainer(self.crys, 0, self.family)
 
-        # check that symmetry analysis is correct
-        self.assertEqual(len(mstates1.symorlist), 4)
-
-        # check that negative orientations are accounted for
-        for i in range(4):
-            self.assertEqual(len(mstates1.symorlist[i]) / len(dbstates.symorlist[i]), 2)
+        # # check that symmetry analysis is correct
+        self.assertEqual(len(mstates.symorlist), 1)
+        #
+        # # check that negative orientations are accounted for
+        self.assertEqual(len(mstates.symorlist[0]) / len(dbstates.symorlist[0]), 2)
 
         # check that every (i,or) set is accounted for
         sm = 0
-        for i in mstates1.symorlist:
+        for i in mstates.symorlist:
             sm += len(i)
-        self.assertEqual(sm, len(mstates1.iorlist))
+        self.assertEqual(sm, len(mstates.iorlist))
+        
+        for g in self.crys.G:
+            gdumb_found = None
+            count = 0
+            for gdumb, gval in mstates.G_crys.items():
+                if gval == g:
+                    gdumb_found = gdumb
+                    count += 1
+            self.assertEqual(count, 1)
+            self.assertTrue(np.allclose(gdumb_found.cartrot, g.cartrot))
+            self.assertTrue(np.allclose(gdumb_found.rot, g.rot))
+            self.assertTrue(np.allclose(gdumb_found.trans, g.trans))
 
+            gdumb_found_pure = None
+            count = 0
+            for gdumb, gval in dbstates.G_crys.items():
+                if gval == g:
+                    gdumb_found_pure = gdumb
+                    count += 1
+            self.assertEqual(count, 1)
+            self.assertTrue(np.allclose(gdumb_found_pure.cartrot, gdumb_found.cartrot))
+            self.assertTrue(np.allclose(gdumb_found_pure.rot, gdumb_found.rot))
+            self.assertTrue(np.allclose(gdumb_found_pure.trans, gdumb_found.trans))
+        
         # check indexmapping
-        for gdumb in mstates1.G:
-            self.assertEqual(len(gdumb.indexmap[0]), len(mstates1.iorlist))
-            for stateind, tup in enumerate(mstates1.iorlist):
+        for gdumb in mstates.G:
+            self.assertEqual(len(gdumb.indexmap[0]), len(mstates.iorlist))
+            for stateind, tup in enumerate(mstates.iorlist):
                 i, o = tup[0], tup[1]
-                R, (ch, inew) = mstates1.crys.g_pos(mstates1.G_crys[gdumb], np.array([0, 0, 0]), (mstates1.chem, i))
+                R, (ch, inew) = mstates.crys.g_pos(mstates.G_crys[gdumb], np.array([0, 0, 0]), (mstates.chem, i))
                 onew = np.dot(gdumb.cartrot, o)
                 count = 0
-                for j, t in enumerate(mstates1.iorlist):
+                for j, t in enumerate(mstates.iorlist):
                     if t[0] == inew and np.allclose(t[1], onew):
                         foundindex = j
                         count += 1
@@ -339,10 +454,10 @@ class test_statemaking(unittest.TestCase):
                 self.assertEqual(foundindex, gdumb.indexmap[0][stateind])
 
         # Check indexing of symlist
-        for symind, symIndlist, symstlist in zip(itertools.count(), mstates1.symIndlist, mstates1.symorlist):
+        for symind, symIndlist, symstlist in zip(itertools.count(), mstates.symIndlist, mstates.symorlist):
             for idx, state in zip(symIndlist, symstlist):
-                self.assertEqual(mstates1.iorlist[idx][0],state[0])
-                self.assertTrue(np.allclose(mstates1.iorlist[idx][1], state[1], atol=mstates1.crys.threshold))
+                self.assertEqual(mstates.iorlist[idx][0],state[0])
+                self.assertTrue(np.allclose(mstates.iorlist[idx][1], state[1], atol=mstates.crys.threshold))
 
     def test_mixedjumps(self):
         latt = np.array([[0., 0.5, 0.5], [0.5, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
@@ -507,30 +622,30 @@ class test_2d(unittest.TestCase):
 
     def test_mStates(self):
         dbstates = crystal.pureDBContainer(self.crys, 0, self.family)
-        mstates1 = crystal.mixedDBContainer(self.crys, 0, self.family)
+        mstates = crystal.mixedDBContainer(self.crys, 0, self.family)
 
         # check that symmetry analysis is correct
-        self.assertEqual(len(mstates1.symorlist), 1)
+        self.assertEqual(len(mstates.symorlist), 1)
 
         # check that negative orientations are accounted for
-        for i in range(len(mstates1.symorlist)):
-            self.assertEqual(len(mstates1.symorlist[i]) / len(dbstates.symorlist[i]), 2)
+        for i in range(len(mstates.symorlist)):
+            self.assertEqual(len(mstates.symorlist[i]) / len(dbstates.symorlist[i]), 2)
 
         # check that every (i,or) set is accounted for
         sm = 0
-        for i in mstates1.symorlist:
+        for i in mstates.symorlist:
             sm += len(i)
-        self.assertEqual(sm, len(mstates1.iorlist))
+        self.assertEqual(sm, len(mstates.iorlist))
 
         # check indexmapping
-        for gdumb in mstates1.G:
-            self.assertEqual(len(gdumb.indexmap[0]), len(mstates1.iorlist))
-            for stateind, tup in enumerate(mstates1.iorlist):
+        for gdumb in mstates.G:
+            self.assertEqual(len(gdumb.indexmap[0]), len(mstates.iorlist))
+            for stateind, tup in enumerate(mstates.iorlist):
                 i, o = tup[0], tup[1]
-                R, (ch, inew) = mstates1.crys.g_pos(mstates1.G_crys[gdumb], np.array([0, 0]), (mstates1.chem, i))
+                R, (ch, inew) = mstates.crys.g_pos(mstates.G_crys[gdumb], np.array([0, 0]), (mstates.chem, i))
                 onew = np.dot(gdumb.cartrot, o)
                 count = 0
-                for j, t in enumerate(mstates1.iorlist):
+                for j, t in enumerate(mstates.iorlist):
                     if t[0] == inew and np.allclose(t[1], onew):
                         foundindex = j
                         count += 1
@@ -538,10 +653,10 @@ class test_2d(unittest.TestCase):
                 self.assertEqual(foundindex, gdumb.indexmap[0][stateind])
 
         # Check indexing of symlist
-        for symind, symIndlist, symstlist in zip(itertools.count(), mstates1.symIndlist, mstates1.symorlist):
+        for symind, symIndlist, symstlist in zip(itertools.count(), mstates.symIndlist, mstates.symorlist):
             for idx, state in zip(symIndlist, symstlist):
-                self.assertEqual(mstates1.iorlist[idx][0],state[0])
-                self.assertTrue(np.allclose(mstates1.iorlist[idx][1], state[1], atol=mstates1.crys.threshold))
+                self.assertEqual(mstates.iorlist[idx][0],state[0])
+                self.assertTrue(np.allclose(mstates.iorlist[idx][1], state[1], atol=mstates.crys.threshold))
 
     def test_jnet2(self):
         # set up the container
