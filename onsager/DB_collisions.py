@@ -7,7 +7,7 @@ def collision_self(dbcontainer, dbcontainer2, jump, cutoff12, cutoff13=None):
     are colliding or not.
 
     params:
-        dbcontainer - the dumbell states container (instance of either dbStates or mStates from states.py module)
+        dbcontainer - the dumbell states container (in crystal module)
         dbcontainer2 - the second container if the jumps are occuring between pure and mixed dumbbell spaces.
         jump - the jump object representing the transitions
         cutoff12 - minimum allowed distance between the two atoms in the initial dumbbell.
@@ -24,10 +24,18 @@ def collision_self(dbcontainer, dbcontainer2, jump, cutoff12, cutoff13=None):
 
     def iscolliding(a0i, a1i, a0j, a1j, cutoff):
         """
-        Returns True if the given atom pair comes closer than cutoff within t=0 or t=1.
-        False otherwise.
-        The position of an atom 'i' as a function of time is given by - R(t) = a0i + a1i * t
-        Then the minimum squared distance between atoms 'i' and 'j' is minimized as a function of time.
+        checks if two atoms are considered to be colliding within the time specified
+        Parameters:
+            - a0i - the initial position of the first atom.
+            - a1i - the total dispalcement of the first atom during the jump (a0i + a1i is the final positon).
+            - a0j - the initial position of the second atom.
+            - a1j - the total dispalcement of the second atom during the jump.
+
+        The position of an atom 'i' as a function of fractional time (going from 0 to 1) is given by: R(t) = a0i + a1i * t
+        Then the minimum squared distance between atoms 'i' and 'j' is then minimized as a function of time.
+
+        Returns:
+             True if the given atom pair comes closer than cutoff within t=0 or t=1, False otherwise.
         """
 
         num = np.dot((a1i - a1j), (a0i - a0j))
@@ -35,7 +43,7 @@ def collision_self(dbcontainer, dbcontainer2, jump, cutoff12, cutoff13=None):
         tmin = np.round(-num / den, decimals=6)
         # print(tmin)
         mindist2 = np.round(
-            np.dot(((a0i + a1i * tmin) - (a0j + a1j * tmin)), ((a0i + a1i * tmin) - (a0j + a1j * tmin))), decimals=4)
+            np.dot(((a0i + a1i * tmin) - (a0j + a1j * tmin)), ((a0i + a1i * tmin) - (a0j + a1j * tmin))), decimals=6)
         # print ("mindist^2 = ",mindist2)
         # print ("cutoff^2 = ",np.round(cutoff**2,decimals=6))
         # print()
