@@ -317,15 +317,16 @@ class test_StarSet(unittest.TestCase):
 
         hcp_Mg = crystal.Crystal.HCP(0.3294, chemistry=["Mg"])
         fcc_Ni = crystal.Crystal.FCC(0.38, chemistry=["Ni"])
+        BCC_Ni = crystal.Crystal.FCC(0.38, chemistry=["Ni"])
         latt = np.array([[0., 0.5, 0.5], [0.5, 0., 0.5], [0.5, 0.5, 0.]]) * 0.55
         DC_Si = crystal.Crystal(latt, [[np.array([0., 0., 0.]), np.array([0.25, 0.25, 0.25])]], ["Si"])
-        famp0 = [np.array([1., 0., 0.]) * 0.145]
+        famp0 = [np.array([1., 1., 0.]) * 0.145 /np.sqrt(2)]
         family = [famp0]
 
         crys2d = crystal.Crystal(np.array([[1., 0.], [0., 1.5]]), [[np.array([0, 0]), np.array([0.5, 0.5])]], ["A"])
 
 
-        crys_list = [DC_Si, hcp_Mg, fcc_Ni, crys2d]
+        crys_list = [DC_Si, hcp_Mg, fcc_Ni, BCC_Ni, crys2d]
 
         for struct, crys in enumerate(crys_list):
             print("Structure:{}\n  dimension:{}\n".format(struct, crys.dim))
@@ -361,9 +362,11 @@ class test_StarSet(unittest.TestCase):
                         self.assertTrue(jtag[row][IS] == 1)
                         for column in range(len(crys_stars.complexStates) + len(crys_stars.mixedstates)):
                             if jtag[row][column] == -1:
-                                self.assertTrue(any(i == IS and j == column for (i, j), dx in jlist))
-                                # If any is true, then that means only one is true, since a jump b/w two states is
-                                # present only once.
+                                count = 0
+                                for (i, j), dx in jlist:
+                                    if i == IS and j == column:
+                                        count += 1
+                                self.assertTrue(count, 1)
 
             rotset = set([])  # Here we will store the rotational jumps in the network
             rotInd = []
@@ -391,6 +394,7 @@ class test_StarSet(unittest.TestCase):
                     state1new, flip1 = jmp.state1.gop(crys_stars.pdbcontainer, gdumb)
                     state2new, flip2 = jmp.state2.gop(crys_stars.pdbcontainer, gdumb)
                     jnew = jump(state1new - state1new.R_s, state2new - state2new.R_s, jmp.c1 * flip1, jmp.c2 * flip2)
+                    self.assertTrue(jnew in omega1_network[x])
                     if not any(jnew == j for j in jlist):
                         jlist.append(jnew)
                         jlist.append(-jnew)
@@ -416,6 +420,13 @@ class test_StarSet(unittest.TestCase):
                     state1new, flip1 = jmp.state1.gop(crys_stars.pdbcontainer, gdumb)
                     state2new, flip2 = jmp.state2.gop(crys_stars.pdbcontainer, gdumb)
                     jnew = jump(state1new - state1new.R_s, state2new - state2new.R_s, jmp.c1 * flip1, jmp.c2 * flip2)
+                    if jnew in rotset:
+                        self.assertTrue(jnew in omega1_network[x])
+                    else:
+                        j_equiv = jump(jnew.state1, jnew.state2, -jnew.c1, -jnew.c2)
+                        self.assertTrue(j_equiv in omega1_network[x])
+                        self.assertTrue(j_equiv in rotset)
+
                     if not any(jnew == j for j in jlist) and jnew in rotset:
                         jlist.append(jnew)
                         jlist.append(-jnew)
@@ -477,6 +488,7 @@ class test_StarSet(unittest.TestCase):
                             state1new = jmp.state1.gop(crys_stars.mdbcontainer, mgdumb, complex=False)
                             state2new, flip2 = jmp.state2.gop(crys_stars.pdbcontainer, gdumb)
                             jnew = jump(state1new - state1new.R_s, state2new - state2new.R_s, -1, jmp.c2 * flip2)
+                            self.assertTrue(jnew in omegalist[x])
                             if not inlist(jnew, jlist):
                                 jlist.append(jnew)
                     else:  # build omega4
@@ -488,29 +500,93 @@ class test_StarSet(unittest.TestCase):
                             state1new, flip1 = jmp.state1.gop(crys_stars.pdbcontainer, gdumb)
                             state2new = jmp.state2.gop(crys_stars.mdbcontainer, mgdumb, complex=False)
                             jnew = jump(state1new - state1new.R_s, state2new - state2new.R_s, jmp.c1 * flip1, -1)
+                            self.assertTrue(jnew in omegalist[x])
                             if not inlist(jnew, jlist):
                                 jlist.append(jnew)
                     self.assertEqual(len(jlist), len(omegalist[x]), msg="{}".format(omegalist[x][0]))
 
             ##Test indexing of the jump networks
             # First, omega_1
+            listIndex = 0
             for jlist, jindlist in zip(omega1_network, omega1_indexed):
                 for jmp, indjmp in zip(jlist, jindlist):
                     self.assertTrue(jmp.state1 == crys_stars.complexStates[indjmp[0][0]])
                     self.assertTrue(jmp.state2 == crys_stars.complexStates[indjmp[0][1]])
+                    db1 = jmp.state1.db
+                    db2 = jmp.state2.db
+
+                    i1, R1 = crys_stars.pdbcontainer.iorlist[db1.iorind][0], db1.R
+                    i2, R2 = crys_stars.pdbcontainer.iorlist[db2.iorind][0], db2.R
+
+                    x1 = crys_stars.pdbcontainer.crys.pos2cart(R1, (0, i1))
+                    x2 = crys_stars.pdbcontainer.crys.pos2cart(R2, (0, i2))
+
+                    self.assertTrue(np.allclose(indjmp[1], x2 - x1))
+
+                    # check the corresponding omega0 jump
+                    db2 = db2 - db1.R
+                    db1 = db1 - db1.R
+
+                    j0 = jump(db1, db2, jmp.c1, jmp.c2)
+                    if np.allclose(x2 - x1, 0):
+                        j_equiv = jump(db1, db2, -jmp.c1, -jmp.c2)
+
+                        count = 0
+                        list0 = None
+                        for j0ListInd, jList in enumerate(crys_stars.jnet0):
+                            for j in jList:
+                                if j == j0 or j == j_equiv:  # check for equivalent jump if on-site rotation.
+                                    count += 1
+                                    list0 = j0ListInd
+                        self.assertEqual(count, 1, msg="{}".format(j0)) # each omega_1 jump must come from a single omega_0 jump
+                        self.assertEqual(om1types[listIndex], list0)
+
+                    else:
+                        count = 0
+                        list0 = None
+                        for j0ListInd, jList in enumerate(crys_stars.jnet0):
+                            for j in jList:
+                                if j == j0:
+                                    count += 1
+                                    list0 = j0ListInd
+                        self.assertEqual(count, 1,
+                                         msg="{}".format(j0))  # each omega_1 jump must come from a single omega_0 jump
+                        self.assertEqual(om1types[listIndex], list0)
+
+
+                listIndex += 1
+
             # Next, omega34
             for jlist, jindlist in zip(omega4_network, omega4_network_indexed):
                 for jmp, indjmp in zip(jlist, jindlist):
                     self.assertTrue(jmp.state1 == crys_stars.complexStates[indjmp[0][0]])
                     self.assertTrue(jmp.state2 == crys_stars.mixedstates[indjmp[0][1]])
 
-            for jlist, jindlist in zip(omega3_network, omega3_network_indexed):
-                for jmp, indjmp in zip(jlist, jindlist):
+                    i1, R1 = crys_stars.pdbcontainer.iorlist[jmp.state1.db.iorind][0], jmp.state1.db.R
+                    i2, R2 = crys_stars.mdbcontainer.iorlist[jmp.state2.db.iorind][0], jmp.state2.db.R
+
+                    x1 = crys_stars.crys.pos2cart(R1, (0, i1))
+                    x2 = crys_stars.crys.pos2cart(R2, (0, i2))
+
+                    self.assertTrue(np.allclose(indjmp[1], x2 - x1))
+
+            for count1, jlist, jindlist in zip(itertools.count(), omega3_network, omega3_network_indexed):
+                for count2, jmp, indjmp in zip(itertools.count(), jlist, jindlist):
                     # print(jmp.state1)
                     # print()
                     # print(crys_stars.mixedstates[indjmp[0][0]])
                     self.assertTrue(jmp.state1 == crys_stars.mixedstates[indjmp[0][0]], msg="{}".format(struct))
                     self.assertTrue(jmp.state2 == crys_stars.complexStates[indjmp[0][1]])
+                    i1, R1 = crys_stars.mdbcontainer.iorlist[jmp.state1.db.iorind][0], jmp.state1.db.R
+                    i2, R2 = crys_stars.pdbcontainer.iorlist[jmp.state2.db.iorind][0], jmp.state2.db.R
+
+                    x1 = crys_stars.crys.pos2cart(R1, (0, i1))
+                    x2 = crys_stars.crys.pos2cart(R2, (0, i2))
+                    self.assertTrue(np.allclose(indjmp[1], x2 - x1))
+
+                    ind4 = omega4_network_indexed[count1][count2]
+                    self.assertTrue(np.allclose(ind4[1], -indjmp[1]), msg="{} \n{}".format(ind4, indjmp))
+
             # testing the tags
             # First, omega4
             for jlist, initdict in zip(omega4_network_indexed, omega4tag):
@@ -520,9 +596,16 @@ class test_StarSet(unittest.TestCase):
                         self.assertTrue(jtag[row][IS] == 1)
                         for column in range(len(crys_stars.complexStates) + len(crys_stars.mixedstates)):
                             if jtag[row][column] == -1:
-                                self.assertTrue(
-                                    any(i == IS and j == column - len(crys_stars.complexStates) for (i, j), dx in
-                                        jlist))
+                                count = 0
+                                for (i, j), dx in jlist:
+                                    if i == IS and j == column - len(crys_stars.complexStates):
+                                        count += 1
+                                self.assertTrue(count, 1)
+
+                            # if jtag[row][column] == -1:
+                            #     self.assertTrue(
+                            #         any(i == IS and j == column - len(crys_stars.complexStates) for (i, j), dx in
+                            #             jlist))
             # Next, omega3
             for jlist, initdict in zip(omega3_network_indexed, omega3tag):
                 for IS, jtag in initdict.items():
@@ -531,7 +614,13 @@ class test_StarSet(unittest.TestCase):
                         self.assertTrue(jtag[row][IS + len(crys_stars.complexStates)] == 1)
                         for column in range(len(crys_stars.complexStates) + len(crys_stars.mixedstates)):
                             if jtag[row][column] == -1:
-                                self.assertTrue(any(i == IS and j == column for (i, j), dx in jlist))
+                                count = 0
+                                for (i, j), dx in jlist:
+                                    if i == IS and j == column:
+                                        count += 1
+                                self.assertTrue(count, 1)
+                            # if jtag[row][column] == -1:
+                            #     self.assertTrue(any(i == IS and j == column for (i, j), dx in jlist))
             # Next, omega2 to mixedstates
             jnet2, jnet2stateindex = crys_stars.jnet2, crys_stars.jnet2_ind
             for i in range(len(jnet2)):
@@ -555,9 +644,14 @@ class test_StarSet(unittest.TestCase):
                         # the zero appears when the intial and final states are the same (but just translated in the lattice) so that they have the same periodic eta vector
                         for column in range(len(crys_stars.complexStates) + len(crys_stars.mixedstates)):
                             if jtag[row][column] == -1:
-                                self.assertTrue(
-                                    any(i == IS and j == column - len(crys_stars.complexStates) for (i, j), dx in
-                                        jlist))
+                                count = 0
+                                for (i, j), dx in jlist:
+                                    if i == IS and j == column - len(crys_stars.complexStates):
+                                        count += 1
+                                self.assertTrue(count, 1)
+                                # self.assertTrue(
+                                #     any(i == IS and j == column - len(crys_stars.complexStates) for (i, j), dx in
+                                #         jlist))
 
     def test_om1types(self):
         """
