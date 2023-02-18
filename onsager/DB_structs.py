@@ -2,13 +2,21 @@ import numpy as np
 from collections import namedtuple
 
 
-# Single dumbbell state representer class.
-# 1. Format - 'i o R c' -> basis index, orientation, lattice vector, active atom indicator
-# 2. Should be able to check if two dumbbell states are identical
-# 3. Should be able to add a jump to a dumbbell state.
-# 4. Should be able to apply a given group operation (crystal specified) to a dumbbell.
+"""
+Module containing several classes to represent objects in dumbbell diffusion.
+"""
 
 class dumbbell(namedtuple('dumbbell', 'iorind R')):
+
+    """
+    Class to define a generic dumbbell object.
+    Each dumbbell is defined by an index "iorind", which indicates the basis site (i) and orientation vector (or),
+    and a lattice vector R.
+    The dumbbell containers pureDBcontainer and mixedDBcontainer defined in the crystal module contain
+    crystal-specific information about dumbbells.
+    For example,  a group operation transforms both sites and the vectors and gives a new "iorind" index and a new lattice vector.
+    The new index is determined by the container object.
+    """
 
     def __eq__(self, other):
         # zero=np.zeros(len(self.o))
@@ -68,6 +76,16 @@ class dumbbell(namedtuple('dumbbell', 'iorind R')):
 # 6. Applying group operations should be able to return the correct results for seperated and mixed dumbbell pairs.
 
 class SdPair(namedtuple('SdPair', "i_s R_s db")):
+    """
+        Class to define a generic solute-dumbbell pair.
+        - Each solute-dumbbell pair is defined by a dumbbell object (defined previously).
+        - Aside from the dumbbell a pair contains "i_s" and "R_s" which are the basis site index and lattice vector of the
+        solute respectively.
+        - SdPair objects are used to define both mixed dumbbells as well as solute-pure dumbbell complex states.
+        - When used to define mixed dumbbells, the appropriate way to use them is with a mixed dumbbell container and
+        - Similarly when used to define a solute-pure dumbbell complex, a pureDBcontainer object is used to analyze the dumbbell's symmetries.
+        Group operations are therefore defined in container-specific manner.
+    """
     def __eq__(self, other):
         true_class = isinstance(other, self.__class__)
         true_solute = self.i_s == other.i_s and np.allclose(self.R_s, other.R_s, atol=1e-8)
@@ -152,11 +170,25 @@ class SdPair(namedtuple('SdPair', "i_s R_s db")):
 # dumbell/pair objects are not aware of jump objects.
 NT_jmp = namedtuple('jump', 'state1 state2 c1 c2')
 class jump(NT_jmp):
+    """
+        Class to define a generic jump/transition.
+        A jump has four part - state1, state2, c1 and c2
+        - state1 - the initial state of a jump. Can be a dumbbell state or a solute-dumbbell pair.
+        - state2 - the final state of the jump reached by a dumbbell movement
+        - c1 - the atom of the dumbbell which moves. can be -1 or +1. if c1 is +1, then it means that the
+        atom at the head of the state1 dumbbell's orientation vector makes the jump. If c1 is -1,
+    """
     def __new__(cls, state1, state2, c1, c2):
-        self = super(jump, cls).__new__(cls, state1, state2, c1, c2)
         # Do Type checking of input stateects
-        if not isinstance(self.state2, self.state1.__class__):
+        if not isinstance(state2, state1.__class__):
             raise TypeError("Incompatible Initial and final states. They must be of the same type.")
+
+        if not (c1 == 1 or c1 == -1):
+            raise TypeError("Incorrect definition of jump. c1 ({}) must be 1 or -1".format(c1))
+        if not (c2 == 1 or c2 == -1):
+            raise TypeError("Incorrect definition of jump. c2 ({}) must be 1 or -1".format(c2))
+
+        self = super(jump, cls).__new__(cls, state1, state2, c1, c2)
 
         return self
 
@@ -207,9 +239,10 @@ class jump(NT_jmp):
 NT_conn = namedtuple('connector', 'state1 state2')
 class connector(NT_conn):
     """
-    An object that simple connects two states.
-    Similar to the jump object, but does not contain information regarding connecting path.
-    Checks compatibility of connections as well.
+    An object that simply connects two dumbbell objects (state1 and state2). It is a way to view the first
+    dumbbell loacted in space relatively to the first dumbbell.
+    Similar to the jump object, but does not contain information regarding connecting path (c1, c2).
+    This is used to compute Green's functions between the dumbbells (see GFExpansion function in DBVectorStars).
     """
 
     def __new__(cls, state1, state2):
