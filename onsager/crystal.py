@@ -1663,7 +1663,7 @@ def DB_disp(dbcontainer, obj1, obj2):
     param:
         dbcontainer - dumbbell states container.
         obj1,obj2 - the initial and final state objects of a jump
-        Return - displacement when going from obj1 to obj2
+        Return - displacement (numpy vector) when going from obj1 to obj2
     """
     crys, chem = dbcontainer.crys, dbcontainer.chem
 
@@ -1681,10 +1681,12 @@ def DB_disp(dbcontainer, obj1, obj2):
 # Note that the annihilation jumps will produce just the negative displacement.
 def DB_disp4(pdbcontainer, mdbcontainer, obj1, obj2):
     """
-    Computes the transport vector for the initial and final states of an associative jump
+    Computes the transport vector for the initial and final states of a mixed dumbbell formation jump
     param:
-        dbcontainer - dumbbell states container.
-        obj1,obj2 - the initial and final state objects of a jump - must be of Omega4 type
+        pdbcontainer - (pureDBContainer) pure dumbbell states container.
+        pdbcontainer - (pureDBContainer) mixed dumbbell states container.
+        obj1,obj2 - the initial and final states - must be of Omega4 type, meaning obj1 denotes
+        the solute-pure dumbbell complex state, and obj2 denoted the mixed dumbbell state.
         Return - displacement when going from obj1 to obj2
     """
     true_crys = np.allclose(pdbcontainer.crys.lattice, mdbcontainer.crys.lattice, atol=pdbcontainer.crys.threshold)
@@ -1716,14 +1718,30 @@ def DB_disp4(pdbcontainer, mdbcontainer, obj1, obj2):
 # Create pure dumbbell states
 class pureDBContainer(object):
     """
-    Class to generate all possible dumbbell configurations for given basis sites.
-    Make a "supercrystal" with the states as the dumbbell configurations, capable of handling symmetry operations.
-    This is mainly to automate group operations on jumps (to return correct dumbbell states)
+    Class to to create an object that generate all possible pure dumbbell configurations
+    for given basis sites, as well as to handle symmetry mapping between them.
     """
 
     def __init__(self, crys, chem, family):
+        """
+        To initialize, we need the crystal object specifying the lattice, the chemistry/sublattice
+        on which dumbbells are allowed to diffuse (for now, dumbbells can diffuse in only one sublattice) and
+        a single vector that denotes a particular orientation a dumbbell can take in this lattice. The length
+        of the orientation is important in that it is used to analzye collisions during atomic jumps. It is recommended
+        to use lengths no more than the atomic diameter of the host/solvent atom.
+        Parameters:
+            crys : (crystal object) the crystal object
+            chem : (int) the chemistry/sublattice index
+            family : (list of numpy vectors) all the orientations allowed to be taken by the pure dumbbell
+        """
         if not isinstance(family, list):
             raise TypeError("Enter the families as a list of lists")
+
+        for vec in family:
+            if not isinstance(vec, np.ndarray):
+                raise TypeError("orientation vectors must be entered as numpy arrays")
+            if not vec.shape[0] == crys.dim:
+                raise ArithmeticError("Array dimension ({}) must be the same as the crystal dimension ({})".format(vec.shape[0], crys.dim))
 
         self.crys = crys
         self.chem = chem
@@ -1739,7 +1757,14 @@ class pureDBContainer(object):
 
     @staticmethod
     def invmapping(symindlist):
-        # Sanity checks between iorlist and symorlist is performed during testing
+        """
+        Takes an indexed symmetry list of pure dumbbells and returns which dumbbell is in which symmetry list
+        Parameters:
+             symindlist : (list of list of integers) list symmetry grouped dumbbells indentified by integer indices
+        Returns:
+            invmap : a list of integers, as long as the number of dumbbells, containing the symmetry group of each dumbbell.
+            example- invamp[i] gives the symmetry group of the i^th dumbbell.
+        """
         invmap = np.zeros(sum([len(lst) for lst in symindlist]), dtype=int)
         for symind, symlist in enumerate(symindlist):
             for st_idx in symlist:
@@ -1748,7 +1773,14 @@ class pureDBContainer(object):
 
     def genpuresets(self):
         """
-        generates complete (i,or) set from given family of orientations, neglects negatives, since pure
+        Generates complete (i,or) set from given family of orientations, including all symmetry variants.
+        Note - an orientation vector and its negative denote the same pure dumbbell, so only one is taken.
+
+        Parameters:
+             None
+        Returns:
+            iorlist - the list of dumbbells in a single unit cell, each being denoted by a tuple (i, or) with "i"
+            being the basis atom index integer and "or" being the orientation bector.
         """
         if not isinstance(self.family, list):
             raise TypeError("Enter the families as a list of lists")
@@ -1795,7 +1827,15 @@ class pureDBContainer(object):
 
     def makeDbGops(self, crys, chem, iorlist):
         """
-        For the case of pure dumbbells, negative orientations give same state
+        Creates GroupOp objects with the same matrices as that of a crystal object, but has an index map that corresponds
+        to dumbbell states instead of just sites.
+        Parameters:
+            crys : the crystal object.
+            chem : the chemistry/sublattice index on which the dumbbells are allowed to diffuse.
+            iorlist : the list of all dumbbells that can occur in a single unit cell.
+        Returns:
+            G : (frozenset) the set of crystal group operations with index map being that of dumbbells.
+            G_crys : (dictionary) keys : GroupOps stored in G, values : corresponding GroupOp of the crystal object.
         """
         G = []
         G_crys = {}
@@ -1822,7 +1862,11 @@ class pureDBContainer(object):
 
     def gensymset(self):
         """
-        Takes in a flat list of (i,or) pairs and groups them according to symmetry
+        Takes in a flat list of (i,or) pairs and groups them according to symmetry.
+        "i" stands for basis index of the dumbbell and "or" for orientation.
+        Returns:
+            symIorList : list of lists (i, or) tuples grouped by symmetry.
+            symIndlist: contains the integer indices given to each dumbbell in symIorList
         """
 
         # We'll take advantage of the gdumbs we have created
@@ -1850,6 +1894,9 @@ class pureDBContainer(object):
         """
         Takes in a (i, or) index, idx, applies a group operation and returns -1 if the groupop reverses the orientation
         from that of the destination index (gdumb.indexmap[0][idx]), +1 if not
+        Parameters:
+            gdumb: group operation with dumbbell index map
+            idx : the index of the dumbbell.
         """
         inew, onew = self.iorlist[gdumb.indexmap[0][idx]]
         if np.allclose(onew, -np.dot(gdumb.cartrot, self.iorlist[idx][1]), atol=self.crys.threshold):
@@ -1866,7 +1913,8 @@ class pureDBContainer(object):
             closestdistance - minimum allowable distance to check for collisions with other atoms. Can be a single
             number or a list (corresponding to each sublattice)
         Returns:
-            jumpnetwork - the symmetrically grouped jumpnetworks (db1,db2,c1,c2)
+            jumpnetwork - the symmetrically grouped jumps
+             Each jump is defined as a tuple (db1,db2,c1,c2). See DB_Structs.
             jumpindices - the jumpnetworks with dbs in pair1 and pair2 indexed to iorset -> (i,j,dx)
         """
         crys, chem, iorlist = self.crys, self.chem, self.iorlist
@@ -1974,10 +2022,11 @@ class pureDBContainer(object):
 
     def getIndex(self, t):
         """
-        :param i: input site index
-        :param o: input orientation
-        (i, o) contained in t
-        :return: idx (integer) - the index of (i, o) in the iorlist, if it exists.
+        get the index of a dumbbell, if it exists (negative orientations accounted for)
+        Paramters:
+            t: tuple containing (basis site index, orientation) of the dumbbell
+        Returns:
+            idx (integer) - the index of (i, o) in the iorlist, if it exists.
         """
         for idx, tup in enumerate(self.iorlist):
             if t[0] == tup[0] and (np.allclose(t[1], tup[1], atol=self.crys.threshold) or
@@ -1987,8 +2036,11 @@ class pureDBContainer(object):
 
     def db2ind(self, db):
         """
-        :param db: dumbbell object
-        :return:
+        Returns index of a dumbbell entered as a dumbbell object from DB_Structs.
+        Paramters:
+            db: dumbbell object
+        Returns:
+            idx : the index of the dumbbell in the (i, or) list. Throws error if not found.
         """
         if not isinstance(db, dumbbell):
             raise TypeError("Input object must be dumbbell")
@@ -2002,8 +2054,25 @@ class pureDBContainer(object):
 # A mixed dumbbell orientation vector and its negative denote different mixed dumbbell states.
 
 class mixedDBContainer(pureDBContainer):
+    """
+    An object to create and store mixed dumbbell information. For mixed dumbbells, positive and negative
+    orientations will denote different
+    states, unlike pure dumbbells.
+    """
 
     def __init__(self, crys, chem, family):
+        """
+        (The initialization of mixed dumbbells is the same as the pure dumbbell container).
+        To initialize, we need the crystal object specifying the lattice, the chemistry/sublattice
+        on which dumbbells are allowed to diffuse (for now, dumbbells can diffuse in only one sublattice) and
+        a single vector that denotes a particular orientation a dumbbell can take in this lattice. The length
+        of the orientation is important in that it is used to analzye collisions during atomic jumps. It is recommended
+        to use lengths no more than the atomic diameter of the host/solvent atom.
+        Parameters:
+            crys : (crystal object) the crystal object
+            chem : (int) the chemistry/sublattice index
+            family : (list of numpy vectors) all the orientations allowed to be taken by the pure dumbbell
+        """
         self.crys = crys
         self.chem = chem
         self.family = family
@@ -2052,7 +2121,17 @@ class mixedDBContainer(pureDBContainer):
 
     def makeDbGops(self, crys, chem, iorlist):
         """
-        This will be different to pureDBcontainer's, since negative orientation imply different states
+        Creates GroupOp objects with the same matrices as that of a crystal object, but has an index map that corresponds
+        to mixed dumbbell states instead of just sites.
+        For pure dumbbells, positive/negative orientation vectors denote same states.
+        However, for mixed dumbbells, they will denote different states.
+        Parameters:
+            crys : the crystal object.
+            chem : the chemistry/sublattice index on which the dumbbells are allowed to diffuse.
+            iorlist : the list of all dumbbells that can occur in a single unit cell.
+        Returns:
+            G : (frozenset) the set of crystal group operations with index map being that of dumbbells.
+            G_crys : (dictionary) keys : GroupOps stored in G, values : corresponding GroupOp of the crystal object.
         """
         G = []
         G_crys = {}
@@ -2082,6 +2161,10 @@ class mixedDBContainer(pureDBContainer):
             solt_solv_cut - minimum allowable distance between solute and solvent atoms - to check for collisions
             closestdistance - minimum allowable distance to check for collisions with other atoms. Can be a single
             number or a list (corresponding to each sublattice)
+        Returns:
+            jumpnetwork - the symmetrically grouped jumpnetworks (db1,db2, 1, 1)
+            Note - for mixed dumbbells only solute jumps.
+            jumpindices - the jumpnetworks with dbs in pair1 and pair2 indexed to iorset -> (i,j,dx)
         """
         crys, chem, mset = self.crys, self.chem, self.iorlist
 
@@ -2152,8 +2235,11 @@ class mixedDBContainer(pureDBContainer):
 
     def getIndex(self, t):
         """
-        :param t = (i, o) - (site, orientation) tuple
-        :return: idx (integer) - the index of (i, o) in the iorlist, if it exists.
+        get the index of a mixed dumbbell, if it exists in the container.
+        Paramters:
+            t: tuple containing (basis site index, orientation) of the dumbbell
+        Returns:
+            idx (integer) - the index of (i, o) in the iorlist, if it exists.
         """
         for idx,tup in enumerate(self.iorlist):
             if t[0]==tup[0] and np.allclose(t[1], tup[1], atol = 1e-8):
