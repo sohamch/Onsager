@@ -234,11 +234,9 @@ class connector(NT_conn):
 
     def gop(self, container, gdumb):
 
-        state1new = self.state1.gop(container, gdumb, pure=True)
-        state2new = self.state2.gop(container, gdumb, pure=True)
-        if pure:
-            db2new = state2new[0] - state1new[0].R
-            db1new = state1new[0] - state1new[0].R
-            return self.__class__(db1new, db2new)
-        else:
-            return self.__class__(state1new - state1new.R, state2new - state1new.R)
+        state1new = self.state1.gop(container, gdumb, pure=True)[0]
+        state2new = self.state2.gop(container, gdumb, pure=True)[0]
+
+        db2new = state2new - state1new.R
+        db1new = state1new - state1new.R
+        return self.__class__(db1new, db2new)
