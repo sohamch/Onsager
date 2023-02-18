@@ -152,7 +152,7 @@ class SdPair(namedtuple('SdPair', "i_s R_s db")):
             raise ValueError("Can only xor between two SdPair objects")
 
         if self.i_s != other.i_s or not np.all(self.R_s == other.R_s):
-            raise ArithmeticError("can only connect states with same solute location.")
+            raise ArithmeticError("can only connect states with same solute locations {} and {}.".format((self.i_s, self.R_s), (other.i_s, other.R_s)))
 
         return connector(self.db - self.db.R, other.db - self.db.R)
 
