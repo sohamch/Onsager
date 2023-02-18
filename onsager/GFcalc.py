@@ -539,24 +539,13 @@ class GFCrystalcalc(object):
 # Green's function calculator for dumbbells
 class GF_dumbbells(GFCrystalcalc):
     """
-    Class calculator for the Green function, designed to work with the Crystal class.
-
-    Highly similar to vacany GF calculator, indexing of jumps is in (i,or) list rather than basis set (i).
+    Calculator for the Green function of pure dumbbells, designed to work with the Crystal class.
+    Exactly the same as the vacany GF calculator, except indexing of jumps is in (i,or) list rather than basis set (i).
     """
 
     def __init__(self, container, jumpnetwork, Nmax=4, kptwt=None):
         """
-        Initializes our calculator with the appropriate topology / connectivity. Doesn't
-        require, at this point, the site probabilities or transition rates to be known.
-
-        :param container: Object containing all dumbbell state information.
-        :param iorlist: flat list of (basis_index,orientation) tuples -> analog of basis[chem]
-        :param symorlist: (basis_index,orientation) pairs grouped into symmetrically unique lists-> analog of sitelist
-        :param jumpnetwork: list of unique transitions as lists of (i,j, dx, c1, c2)
-                            "Note here i and j are indices into iorlist"
-                            "Needs to be ensured that the jumpnetwork belongs to the container"
-        :param Nmax: maximum range as estimator for kpt mesh generation
-        :param kptwt: (optional) tuple of (kpts, wts) to short-circuit kpt mesh generation
+        Straigforward extenstion of the vacancy to the pure dumbbell case.
         """
         # this is really just used by loadHDF5() to circumvent __init__
         if all(x is None for x in (container, jumpnetwork)): return
