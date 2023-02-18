@@ -1887,7 +1887,7 @@ class pureDBContainer(object):
                 db2new = db2new - R_ref
                 db1new = db1new - R_ref
 
-                jnew = jump(db1new, db2new, j.c1 * mul1, j.c2 * mul2)  # Check this part
+                jnew = jump(db1new, db2new, j.c1 * mul1, j.c2 * mul2)
                 dx = DB_disp(self, jnew.state1, jnew.state2)
 
                 db1newneg = dumbbell(jnew.state2.iorind, jnew.state1.R)
