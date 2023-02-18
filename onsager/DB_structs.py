@@ -232,10 +232,10 @@ class connector(NT_conn):
     def __neg__(self):
         return self.__class__(self.state2 - self.state2.R, self.state1 - self.state2.R)
 
-    def gop(self, container, gdumb, pure=True):
+    def gop(self, container, gdumb):
 
-        state1new = self.state1.gop(container, gdumb, pure=pure)
-        state2new = self.state2.gop(container, gdumb, pure=pure)
+        state1new = self.state1.gop(container, gdumb, pure=True)
+        state2new = self.state2.gop(container, gdumb, pure=True)
         if pure:
             db2new = state2new[0] - state1new[0].R
             db1new = state1new[0] - state1new[0].R

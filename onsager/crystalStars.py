@@ -1915,7 +1915,7 @@ class DBVectorStars(object):
                 continue
             connectlist = []
             for gdumb in self.starset.pdbcontainer.G:
-                snew = s.gop(self.starset.pdbcontainer, gdumb, pure=True)
+                snew = s.gop(self.starset.pdbcontainer, gdumb)
                 # Bring the dumbbell of the initial state to the origin
                 # snew = snew.shift() No need for shifting. Automatically done in gop function.
                 if snew in GFPureStarInd:
