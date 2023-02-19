@@ -1974,10 +1974,10 @@ class dumbbellMediated():
         # We have constructed the Nstates x 3 eta0 vectors for complex states
         # We need to produce a total eta vector list.
 
-        # Nothing called solute eta vector in bare dumbbell jumps.
+
         self.eta0total_solute = np.zeros((len(self.vkinetic.starset.complexStates) +
                                           len(self.vkinetic.starset.mixedstates), self.crys.dim))
-        # noinspection PyAttributeOutsideInit
+
         self.eta0total_solvent = np.zeros((len(self.vkinetic.starset.complexStates) +
                                            len(self.vkinetic.starset.mixedstates), self.crys.dim))
 
