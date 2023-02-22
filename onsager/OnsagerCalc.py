@@ -1813,7 +1813,7 @@ class dumbbellMediated():
         # self.clearcache()
 
     # staticmethod functions to compute rates and energies of isolated dumbbell states
-    # These are taken from the interstitial class
+    # These are taken from the interstitial class by Prof. Trinkle
     @staticmethod
     def stateprob(pre, betaene, invmap):
         """Returns our (i,or) probabilities, normalized, as a vector.
@@ -1842,10 +1842,10 @@ class dumbbellMediated():
                  for (i, j), dx in t]
                 for t, pT, beT in zip(jumpnetwork, preT, betaeneT)]
 
-    def calc_eta(self, rate0list, omega0escape, rate2list, omega2escape, eta2shift=True):
+    def calc_eta(self, rate0list, omega0escape): #, rate2list, omega2escape):
         """
         Function to calculate the periodic eta vectors.
-        rate0list, rate2list - the NON-SYMMETRIZED rate lists for the bare and mixed dumbbell spaces.
+        rate0list - the NON-SYMMETRIZED rate lists for the bare and mixed dumbbell spaces.
         We are calulcating the eta vectors, not the gamma vectors.
         """
 
@@ -1865,16 +1865,16 @@ class dumbbellMediated():
         # The equation can be derived from the Fourier space inverse relations at q=0 for their symmetrized versions.
         self.G0 = pinv(W0)
 
-        W2 = np.zeros((len(self.kinetic.mixedstates),
-                       len(self.kinetic.mixedstates)))
-        # use the indexed omega2 to fill this up - need omega2 indexed to mixed subspace of starset
-        for jt, jlist in enumerate(self.jnet2_indexed):
-            for jnum, ((i, j), dx) in enumerate(jlist):
-                W2[i, j] += rate2list[jt][jnum]  # The unsymmetrized rate for that jump.
-                W2[i, i] -= rate2list[jt][jnum]  # Add the same to the diagonal
-
-        self.G2 = pinv(W2)
-        self.W2 = W2
+        # W2 = np.zeros((len(self.kinetic.mixedstates),
+        #                len(self.kinetic.mixedstates)))
+        # # use the indexed omega2 to fill this up - need omega2 indexed to mixed subspace of starset
+        # for jt, jlist in enumerate(self.jnet2_indexed):
+        #     for jnum, ((i, j), dx) in enumerate(jlist):
+        #         W2[i, j] += rate2list[jt][jnum]  # The unsymmetrized rate for that jump.
+        #         W2[i, i] -= rate2list[jt][jnum]  # Add the same to the diagonal
+        #
+        # self.G2 = pinv(W2)
+        # self.W2 = W2
 
         self.biasBareExpansion = self.biases[-1]
 
@@ -1911,82 +1911,82 @@ class dumbbellMediated():
 
             # Then, we use G0 to get the eta0 vectors. The second 0 in eta00 indicates omega0 space.
             self.eta00_solvent_bare = np.tensordot(self.G0, self.NlsolventVel_bare, axes=(1, 0))
-            self.eta00_solute_bare = np.zeros_like(self.eta00_solvent_bare)
+            # self.eta00_solute_bare = np.zeros_like(self.eta00_solvent_bare)
 
             # Now match the non-local biases for complex states to the pure states
             self.eta00_solvent = np.zeros((len(self.vkinetic.starset.complexStates), self.crys.dim))
-            self.eta00_solute = np.zeros((len(self.vkinetic.starset.complexStates), self.crys.dim))
+            # self.eta00_solute = np.zeros((len(self.vkinetic.starset.complexStates), self.crys.dim))
             self.NlsolventBias0 = np.zeros((len(self.vkinetic.starset.complexStates), self.crys.dim))
 
             for i, state in enumerate(self.vkinetic.starset.complexStates):
                 dbstate_ind = state.db.iorind
-                self.eta00_solvent[i, :] = self.eta00_solvent_bare[dbstate_ind, :].copy()
-                self.NlsolventBias0[i, :] = self.NlsolventVel_bare[dbstate_ind, :].copy()
+                self.eta00_solvent[i, :] = self.eta00_solvent_bare[dbstate_ind, :] #.copy()
+                self.NlsolventBias0[i, :] = self.NlsolventVel_bare[dbstate_ind, :] #.copy()
 
         # For the mixed dumbbell space, translational symmetry tells us that we only need to consider the dumbbells
         # in the first unit cell only. So, we are already considering the bias out of every state we need to consider.
-
-        if eta2shift:
-
-            bias2exp_solute, bias2exp_solvent = self.biases[2]
-            self.NlsoluteVel_mixed = np.zeros((len(self.vkinetic.starset.mixedstates), self.crys.dim))
-            Nvstars_mixed = self.vkinetic.Nvstars - self.vkinetic.Nvstars_pure
-            Nvstars_pure = self.vkinetic.Nvstars_pure
-
-            mstart = self.kinetic.mixedstartindex
-
-            # We evaluate the velocity vectors in the basis of vector wyckoff sets.
-            # Need omega2_escape.
-
-            velocity2SolventTotNonLoc = np.array([np.dot(bias2exp_solvent[i - Nvstars_pure, :],
-                                                         omega2escape[self.vkinetic.vstar2star[i] - mstart, :])
-                                                  for i in range(Nvstars_pure, self.vkinetic.Nvstars)])
-
-            velocity2SoluteTotNonLoc = np.array([np.dot(bias2exp_solute[i - Nvstars_pure, :],
-                                                        omega2escape[self.vkinetic.vstar2star[i] - mstart, :])
-                                                 for i in range(Nvstars_pure, self.vkinetic.Nvstars)])
-
-            self.NlsolventVel_mixed = np.zeros((len(self.kinetic.mixedstates), self.crys.dim))
-            self.NlsoluteVel_mixed = np.zeros((len(self.kinetic.mixedstates), self.crys.dim))
-
-            # Then, we convert them to cartesian form for each state.
-            for st in self.vkinetic.starset.mixedstates:
-                indlist = self.vkinetic.stateToVecStar_mixed[st]
-                if len(indlist) != 0:
-                    self.NlsolventVel_mixed[self.vkinetic.starset.mixedindexdict[st][0]][:] = \
-                        sum([velocity2SolventTotNonLoc[tup[0] - Nvstars_pure] * self.vkinetic.vecvec[tup[0]][tup[1]] for tup
-                             in
-                             indlist])
-                    self.NlsoluteVel_mixed[self.vkinetic.starset.mixedindexdict[st][0]][:] = \
-                        sum([velocity2SoluteTotNonLoc[tup[0] - Nvstars_pure] * self.vkinetic.vecvec[tup[0]][tup[1]] for tup
-                             in
-                             indlist])
-
-            # Then, we use G2 to get the eta2 vectors. The second 2 in eta02 indicates omega2 space.
-            self.eta02_solvent = np.tensordot(self.G2, self.NlsolventVel_mixed, axes=(1, 0))
-            self.eta02_solute = np.tensordot(self.G2, self.NlsoluteVel_mixed, axes=(1, 0))
-
-        else:
-            self.eta02_solvent = np.zeros((len(self.kinetic.mixedstates), self.crys.dim))
-            self.eta02_solute = np.zeros((len(self.kinetic.mixedstates), self.crys.dim))
+        #
+        # if eta2shift:
+        #
+        #     bias2exp_solute, bias2exp_solvent = self.biases[2]
+        #     self.NlsoluteVel_mixed = np.zeros((len(self.vkinetic.starset.mixedstates), self.crys.dim))
+        #     Nvstars_mixed = self.vkinetic.Nvstars - self.vkinetic.Nvstars_pure
+        #     Nvstars_pure = self.vkinetic.Nvstars_pure
+        #
+        #     mstart = self.kinetic.mixedstartindex
+        #
+        #     # We evaluate the velocity vectors in the basis of vector wyckoff sets.
+        #     # Need omega2_escape.
+        #
+        #     velocity2SolventTotNonLoc = np.array([np.dot(bias2exp_solvent[i - Nvstars_pure, :],
+        #                                                  omega2escape[self.vkinetic.vstar2star[i] - mstart, :])
+        #                                           for i in range(Nvstars_pure, self.vkinetic.Nvstars)])
+        #
+        #     velocity2SoluteTotNonLoc = np.array([np.dot(bias2exp_solute[i - Nvstars_pure, :],
+        #                                                 omega2escape[self.vkinetic.vstar2star[i] - mstart, :])
+        #                                          for i in range(Nvstars_pure, self.vkinetic.Nvstars)])
+        #
+        #     self.NlsolventVel_mixed = np.zeros((len(self.kinetic.mixedstates), self.crys.dim))
+        #     self.NlsoluteVel_mixed = np.zeros((len(self.kinetic.mixedstates), self.crys.dim))
+        #
+        #     # Then, we convert them to cartesian form for each state.
+        #     for st in self.vkinetic.starset.mixedstates:
+        #         indlist = self.vkinetic.stateToVecStar_mixed[st]
+        #         if len(indlist) != 0:
+        #             self.NlsolventVel_mixed[self.vkinetic.starset.mixedindexdict[st][0]][:] = \
+        #                 sum([velocity2SolventTotNonLoc[tup[0] - Nvstars_pure] * self.vkinetic.vecvec[tup[0]][tup[1]] for tup
+        #                      in
+        #                      indlist])
+        #             self.NlsoluteVel_mixed[self.vkinetic.starset.mixedindexdict[st][0]][:] = \
+        #                 sum([velocity2SoluteTotNonLoc[tup[0] - Nvstars_pure] * self.vkinetic.vecvec[tup[0]][tup[1]] for tup
+        #                      in
+        #                      indlist])
+        #
+        #     # Then, we use G2 to get the eta2 vectors. The second 2 in eta02 indicates omega2 space.
+        #     self.eta02_solvent = np.tensordot(self.G2, self.NlsolventVel_mixed, axes=(1, 0))
+        #     self.eta02_solute = np.tensordot(self.G2, self.NlsoluteVel_mixed, axes=(1, 0))
+        #
+        # else:
+        #     self.eta02_solvent = np.zeros((len(self.kinetic.mixedstates), self.crys.dim))
+        #     self.eta02_solute = np.zeros((len(self.kinetic.mixedstates), self.crys.dim))
 
         # So what do we have up until now?
         # We have constructed the Nstates x 3 eta0 vectors for complex states
         # We need to produce a total eta vector list.
 
 
-        self.eta0total_solute = np.zeros((len(self.vkinetic.starset.complexStates) +
-                                          len(self.vkinetic.starset.mixedstates), self.crys.dim))
+        # self.eta0total_solute = np.zeros((len(self.vkinetic.starset.complexStates) +
+        #                                   len(self.vkinetic.starset.mixedstates), self.crys.dim))
 
         self.eta0total_solvent = np.zeros((len(self.vkinetic.starset.complexStates) +
                                            len(self.vkinetic.starset.mixedstates), self.crys.dim))
 
         # Just copy the portion for the complex states, leave mixed dumbbell state space as zeros.
         self.eta0total_solvent[:len(self.vkinetic.starset.complexStates), :] = self.eta00_solvent.copy()
-        self.eta0total_solvent[len(self.vkinetic.starset.complexStates):, :] = self.eta02_solvent.copy()
-        self.eta0total_solute[len(self.vkinetic.starset.complexStates):, :] = self.eta02_solute.copy()
+        # self.eta0total_solvent[len(self.vkinetic.starset.complexStates):, :] = self.eta02_solvent.copy()
+        # self.eta0total_solute[len(self.vkinetic.starset.complexStates):, :] = self.eta02_solute.copy()
 
-    def bias_changes(self, eta2shift=True):
+    def bias_changes(self):
         """
         Function that allows us to construct new bias and bare expansions based on the eta vectors already calculated.
 
@@ -1997,47 +1997,47 @@ class dumbbellMediated():
         """
         # create updates to the bias expansions
         # Construct the projection of eta vectors
-        self.delbias1expansion_solute = np.zeros_like(self.biases[1][0])
+        # self.delbias1expansion_solute = np.zeros_like(self.biases[1][0])
         self.delbias1expansion_solvent = np.zeros_like(self.biases[1][1])
 
-        self.delbias4expansion_solute = np.zeros_like(self.biases[4][0])
+        # self.delbias4expansion_solute = np.zeros_like(self.biases[4][0])
         self.delbias4expansion_solvent = np.zeros_like(self.biases[4][1])
 
-        self.delbias3expansion_solute = np.zeros_like(self.biases[3][0])
-        self.delbias3expansion_solvent = np.zeros_like(self.biases[3][0])
+        # self.delbias3expansion_solute = np.zeros_like(self.biases[3][0])
+        self.delbias3expansion_solvent = np.zeros_like(self.biases[3][1])
 
-        self.delbias2expansion_solute = np.zeros_like(self.biases[2][0])
-        self.delbias2expansion_solvent = np.zeros_like(self.biases[2][0])
+        # self.delbias2expansion_solute = np.zeros_like(self.biases[2][0])
+        # self.delbias2expansion_solvent = np.zeros_like(self.biases[2][0])
 
-        if len(self.vkinetic.vecpos_bare) == 0 and not eta2shift:
+        if len(self.vkinetic.vecpos_bare) == 0: # and not eta2shift:
             return
 
-        if eta2shift:
-            for i in range(self.vkinetic.Nvstars - self.vkinetic.Nvstars_pure):
-                # get the representative state(its index in mixedstates) and vector
-                v0 = self.vkinetic.vecvec[i + self.vkinetic.Nvstars_pure][0]
-                st0 = self.vkinetic.starset.mixedindexdict[self.vkinetic.vecpos[i + self.vkinetic.Nvstars_pure][0]][0]
-                # Form the projection of the eta vectors on v0
-                eta_proj_solute = np.dot(self.eta0total_solute, v0)
-                eta_proj_solvent = np.dot(self.eta0total_solvent, v0)
-
-                # Now go through the omega2 jump network tags
-                for jt, initindexdict in enumerate(self.jtags2):
-                    # see if there's an array corresponding to the initial state
-                    if not st0 in initindexdict:
-                        continue
-                    self.delbias2expansion_solute[i, jt] += len(self.vkinetic.vecpos[i + self.vkinetic.Nvstars_pure]) * \
-                                                            np.sum(np.dot(initindexdict[st0], eta_proj_solute))
-
-                    self.delbias2expansion_solvent[i, jt] += len(self.vkinetic.vecpos[i + self.vkinetic.Nvstars_pure]) * \
-                                                             np.sum(np.dot(initindexdict[st0], eta_proj_solvent))
+        # if eta2shift:
+        #     for i in range(self.vkinetic.Nvstars - self.vkinetic.Nvstars_pure):
+        #         # get the representative state(its index in mixedstates) and vector
+        #         v0 = self.vkinetic.vecvec[i + self.vkinetic.Nvstars_pure][0]
+        #         st0 = self.vkinetic.starset.mixedindexdict[self.vkinetic.vecpos[i + self.vkinetic.Nvstars_pure][0]][0]
+        #         # Form the projection of the eta vectors on v0
+        #         eta_proj_solute = np.dot(self.eta0total_solute, v0)
+        #         eta_proj_solvent = np.dot(self.eta0total_solvent, v0)
+        #
+        #         # Now go through the omega2 jump network tags
+        #         for jt, initindexdict in enumerate(self.jtags2):
+        #             # see if there's an array corresponding to the initial state
+        #             if not st0 in initindexdict:
+        #                 continue
+        #             self.delbias2expansion_solute[i, jt] += len(self.vkinetic.vecpos[i + self.vkinetic.Nvstars_pure]) * \
+        #                                                     np.sum(np.dot(initindexdict[st0], eta_proj_solute))
+        #
+        #             self.delbias2expansion_solvent[i, jt] += len(self.vkinetic.vecpos[i + self.vkinetic.Nvstars_pure]) * \
+        #                                                      np.sum(np.dot(initindexdict[st0], eta_proj_solvent))
 
         for i in range(self.vkinetic.Nvstars_pure):
             # get the representative state(its index in complexStates) and vector
             v0 = self.vkinetic.vecvec[i][0]
             st0 = self.vkinetic.starset.complexIndexdict[self.vkinetic.vecpos[i][0]][0]
             # Index of the state in the flat list
-            eta_proj_solute = np.dot(self.eta0total_solute, v0)
+            # eta_proj_solute = np.dot(self.eta0total_solute, v0)
             eta_proj_solvent = np.dot(self.eta0total_solvent, v0)
             # Now go through the omega1 jump network tags
             for jt, initindexdict in enumerate(self.jtags1):
@@ -2045,8 +2045,8 @@ class dumbbellMediated():
                 if not st0 in initindexdict:
                     # if the representative state does not occur as an initial state in any of the jumps, continue.
                     continue
-                self.delbias1expansion_solute[i, jt] += len(self.vkinetic.vecpos[i]) * np.sum(
-                    np.dot(initindexdict[st0], eta_proj_solute))
+                # self.delbias1expansion_solute[i, jt] += len(self.vkinetic.vecpos[i]) * np.sum(
+                #     np.dot(initindexdict[st0], eta_proj_solute))
                 self.delbias1expansion_solvent[i, jt] += len(self.vkinetic.vecpos[i]) * np.sum(
                     np.dot(initindexdict[st0], eta_proj_solvent))
             # Now let's build it for omega4
@@ -2054,8 +2054,8 @@ class dumbbellMediated():
                 # see if there's an array corresponding to the initial state
                 if not st0 in initindexdict:
                     continue
-                self.delbias4expansion_solute[i, jt] += len(self.vkinetic.vecpos[i]) * np.sum(
-                    np.dot(initindexdict[st0], eta_proj_solute))
+                # self.delbias4expansion_solute[i, jt] += len(self.vkinetic.vecpos[i]) * np.sum(
+                #     np.dot(initindexdict[st0], eta_proj_solute))
                 self.delbias4expansion_solvent[i, jt] += len(self.vkinetic.vecpos[i]) * np.sum(
                     np.dot(initindexdict[st0], eta_proj_solvent))
 
@@ -2064,7 +2064,7 @@ class dumbbellMediated():
             v0 = self.vkinetic.vecvec[i + self.vkinetic.Nvstars_pure][0]
             st0 = self.vkinetic.starset.mixedindexdict[self.vkinetic.vecpos[i + self.vkinetic.Nvstars_pure][0]][0]
             # Form the projection of the eta vectors on v0
-            eta_proj_solute = np.dot(self.eta0total_solute, v0)
+            # eta_proj_solute = np.dot(self.eta0total_solute, v0)
             eta_proj_solvent = np.dot(self.eta0total_solvent, v0)
 
             # Need to update for omega3 because the solvent shift vector in the complex space is not zero.
@@ -2074,27 +2074,27 @@ class dumbbellMediated():
                 # see if there's an array corresponding to the initial state
                 if not st0 in initindexdict:
                     continue
-                self.delbias3expansion_solute[i, jt] += len(self.vkinetic.vecpos[i + self.vkinetic.Nvstars_pure]) * \
-                                                        np.sum(np.dot(initindexdict[st0], eta_proj_solute))
+                # self.delbias3expansion_solute[i, jt] += len(self.vkinetic.vecpos[i + self.vkinetic.Nvstars_pure]) * \
+                #                                         np.sum(np.dot(initindexdict[st0], eta_proj_solute))
                 self.delbias3expansion_solvent[i, jt] += len(self.vkinetic.vecpos[i + self.vkinetic.Nvstars_pure]) * \
                                                          np.sum(np.dot(initindexdict[st0], eta_proj_solvent))
 
-    def update_bias_expansions(self, rate0list, omega0escape, rate2list, omega2escape, eta2shift=True):
-        self.calc_eta(rate0list, omega0escape, rate2list, omega2escape, eta2shift=eta2shift)
-        self.bias_changes(eta2shift=eta2shift)
-        self.bias1_solute_new = stars.zeroclean(self.biases[1][0] + self.delbias1expansion_solute)
+    def update_bias_expansions(self, rate0list, omega0escape): #, rate2list, omega2escape):
+        self.calc_eta(rate0list, omega0escape) #, rate2list, omega2escape)
+        self.bias_changes()
+        # self.bias1_solute_new = self.biases[1][0] # stars.zeroclean( + self.delbias1expansion_solute)
         self.bias1_solvent_new = stars.zeroclean(self.biases[1][1] + self.delbias1expansion_solvent)
 
-        self.bias3_solute_new = stars.zeroclean(self.biases[3][0] + self.delbias3expansion_solute)
+        # self.bias3_solute_new = self.biases[3][0] # stars.zeroclean( + self.delbias3expansion_solute)
         self.bias3_solvent_new = stars.zeroclean(self.biases[3][1] + self.delbias3expansion_solvent)
 
-        self.bias4_solute_new = stars.zeroclean(self.biases[4][0] + self.delbias4expansion_solute)
+        # self.bias4_solute_new = self.biases[4][0] # stars.zeroclean( + self.delbias4expansion_solute)
         self.bias4_solvent_new = stars.zeroclean(self.biases[4][1] + self.delbias4expansion_solvent)
 
-        self.bias2_solute_new = stars.zeroclean(self.biases[2][0] + self.delbias2expansion_solute)
-        self.bias2_solvent_new = stars.zeroclean(self.biases[2][1] + self.delbias2expansion_solvent)
+        self.bias2_solute_new = self.biases[2][0]  # stars.zeroclean( + self.delbias2expansion_solute)
+        self.bias2_solvent_new = self.biases[2][1]  # + self.delbias2expansion_solvent)
 
-    def bareExpansion(self, eta0_solute, eta0_solvent):
+    def bareExpansion(self, eta0_solvent):
         """
         Returns the contributions to the terms of the uncorrelated diffusivity term,
         grouped separately for each type of jump. Intended to be called after displacements have been applied to the displacements.
@@ -2155,7 +2155,7 @@ class dumbbellMediated():
             for (IS, FS), dx in jumplist:
                 # o1 = iorlist_mixed[self.vkinetic.starset.mixedstates[IS].db.iorind][1]
                 # o2 = iorlist_mixed[self.vkinetic.starset.mixedstates[FS].db.iorind][1]
-                dx_solute = dx + eta0_solute[Ncomp + IS] - eta0_solute[Ncomp + FS]  # + o2 / 2. - o1 / 2.
+                dx_solute = dx #+ eta0_solute[Ncomp + IS] - eta0_solute[Ncomp + FS]  # + o2 / 2. - o1 / 2.
                 dx_solvent = dx + eta0_solvent[Ncomp + IS] - eta0_solvent[Ncomp + FS]  # - o2 / 2. + o1 / 2.
                 D2expansion_aa[:, :, jt] += 0.5 * np.outer(dx_solute, dx_solute)
                 D2expansion_bb[:, :, jt] += 0.5 * np.outer(dx_solvent, dx_solvent)
@@ -2164,20 +2164,20 @@ class dumbbellMediated():
         for jt, jumplist in enumerate(jumpnetwork_omega3):
             for (IS, FS), dx in jumplist:
                 # o1 = iorlist_mixed[self.vkinetic.starset.mixedstates[IS].db.iorind][1]
-                dx_solute = eta0_solute[Ncomp + IS] - eta0_solute[FS]  # -o1 / 2.
+                # dx_solute = np.zeros(self.crys.dim) # eta0_solute[Ncomp + IS] - eta0_solute[FS]  # -o1 / 2.
                 dx_solvent = dx + eta0_solvent[Ncomp + IS] - eta0_solvent[FS]  # + o1 / 2.
-                D3expansion_aa[:, :, jt] += 0.5 * np.outer(dx_solute, dx_solute)
+                # D3expansion_aa[:, :, jt] += 0.5 * np.outer(dx_solute, dx_solute)
                 D3expansion_bb[:, :, jt] += 0.5 * np.outer(dx_solvent, dx_solvent)
-                D3expansion_ab[:, :, jt] += 0.5 * np.outer(dx_solute, dx_solvent)
+                # D3expansion_ab[:, :, jt] += 0.5 * np.outer(dx_solute, dx_solvent)
 
         for jt, jumplist in enumerate(jumpnetwork_omega4):
             for (IS, FS), dx in jumplist:
                 # o2 = iorlist_mixed[self.vkinetic.starset.mixedstates[FS].db.iorind][1]
-                dx_solute = eta0_solute[IS] - eta0_solute[Ncomp + FS]  # o2 / 2. +
+                # dx_solute = eta0_solute[IS] - eta0_solute[Ncomp + FS]  # o2 / 2. +
                 dx_solvent = dx + eta0_solvent[IS] - eta0_solvent[Ncomp + FS]  # - o2 / 2.
-                D4expansion_aa[:, :, jt] += 0.5 * np.outer(dx_solute, dx_solute)
+                # D4expansion_aa[:, :, jt] += 0.5 * np.outer(dx_solute, dx_solute)
                 D4expansion_bb[:, :, jt] += 0.5 * np.outer(dx_solvent, dx_solvent)
-                D4expansion_ab[:, :, jt] += 0.5 * np.outer(dx_solute, dx_solvent)
+                # D4expansion_ab[:, :, jt] += 0.5 * np.outer(dx_solute, dx_solvent)
 
         zeroclean = stars.zeroclean
 
@@ -2387,8 +2387,8 @@ class dumbbellMediated():
         """
         Constructs the N_vs x N_vs GF matrix.
         """
-        if not hasattr(self, 'G2'):
-            raise AttributeError("G2 not found yet. Please run calc_eta first.")
+        # if not hasattr(self, 'G2'):
+        #     raise AttributeError("G2 not found yet. Please run calc_eta first.")
 
         Nvstars_pure = self.vkinetic.Nvstars_pure
 
@@ -2453,7 +2453,7 @@ class dumbbellMediated():
 
         return stars.zeroclean(GF_total), GF02, delta_om
 
-    def L_ij(self, bFdb0, bFT0, bFdb2, bFT2, bFS, bFSdb, bFT1, bFT3, bFT4, eta2shift=False):
+    def L_ij(self, bFdb0, bFT0, bFdb2, bFT2, bFS, bFSdb, bFT1, bFT3, bFT4):
 
         """
         bFdb0[i] = beta*ene_pdb[i] - ln(pre_pdb[i]), i=1,2...,N_pdbcontainer.symorlist - pure dumbbell free energy
@@ -2498,8 +2498,8 @@ class dumbbellMediated():
         rate0list = self.ratelist(self.jnet0_indexed, pre0, bFdb0 - bFdb0_min, pre0T, bFT0,
                              self.vkinetic.starset.pdbcontainer.invmap)
 
-        rate2list = self.ratelist(self.jnet2_indexed, pre2, bFdb2 - bFdb2_min, pre2T, bFT2,
-                             self.vkinetic.starset.mdbcontainer.invmap)
+        # rate2list = self.ratelist(self.jnet2_indexed, pre2, bFdb2 - bFdb2_min, pre2T, bFT2,
+        #                      self.vkinetic.starset.mdbcontainer.invmap)
 
         # 3. Make the symmetrized rates and escape rates for calculating eta0, GF, bias and gamma.
         # 3a. First, make bFSdb_total from individual solute and pure dumbbell and the binding free energies,
@@ -2550,7 +2550,7 @@ class dumbbellMediated():
                   (omega4, omega4escape))
 
         # 4. Update the bias expansions
-        self.update_bias_expansions(rate0list, omega0escape, rate2list, omega2escape, eta2shift=eta2shift)
+        self.update_bias_expansions(rate0list, omega0escape) #, rate2list, omega2escape)
 
         # 5. Work out the probabilities and the normalization - will be needed to produce g2 from G2 (created in bias
         # updates)
@@ -2614,16 +2614,16 @@ class dumbbellMediated():
         # 7c. For the solutes in complex configurations, the only local bias comes due to displacements during
         # association.
         # complex-complex jumps leave the solute unchanged and hence do not contribute to solute bias.
-        self.biases_solute_vs[:Nvstars_pure] = np.array([np.dot(self.bias4_solute_new[i, :], omega4escape[i, :]) *
-                                                         prob_sqrt_complex_vs[i] for i in range(Nvstars_pure)])
-
-        # 7d. Next, we work out the updated solute bias in the mixed space.
-        # remember that the omega2 bias is the non-local bias, and so has been subtracted out.
-        # See test_bias_updates function to check that bias2_solute_new is all zeros.
-        self.biases_solute_vs[Nvstars_pure:] = np.array([np.dot(self.bias3_solute_new[i - Nvstars_pure, :],
-                                                                omega3escape[i - Nvstars_pure, :]) *
-                                                         prob_sqrt_mixed_vs[i - Nvstars_pure]
-                                                         for i in range(Nvstars_pure, self.vkinetic.Nvstars)])
+        # self.biases_solute_vs[:Nvstars_pure] = np.array([np.dot(self.bias4_solute_new[i, :], omega4escape[i, :]) *
+        #                                                  prob_sqrt_complex_vs[i] for i in range(Nvstars_pure)])
+        #
+        # # 7d. Next, we work out the updated solute bias in the mixed space.
+        # # remember that the omega2 bias is the non-local bias, and so has been subtracted out.
+        # # See test_bias_updates function to check that bias2_solute_new is all zeros.
+        # self.biases_solute_vs[Nvstars_pure:] = np.array([np.dot(self.bias3_solute_new[i - Nvstars_pure, :],
+        #                                                         omega3escape[i - Nvstars_pure, :]) *
+        #                                                  prob_sqrt_mixed_vs[i - Nvstars_pure]
+        #                                                  for i in range(Nvstars_pure, self.vkinetic.Nvstars)])
 
         # omega1 has total rates. So, to get the non-local change in the rates, we must subtract out the corresponding
         # non-local rates.
@@ -2646,18 +2646,19 @@ class dumbbellMediated():
                                                                  omega3escape[i - Nvstars_pure, :]) *
                                                           prob_sqrt_mixed_vs[i - Nvstars_pure]
                                                           for i in range(Nvstars_pure, self.vkinetic.Nvstars)])
-        # In the mixed state space, the local bias comes due only to the omega3(dissociation) jumps.
-        if not eta2shift:
-            # if eta2shift is false, then the bias2_new tensors won't be all zeros
-            for i in range(Nvstars_pure, Nvstars):
-                st0 = self.vkinetic.vecpos[i][0]
-                dbwyck2 = self.mdbcontainer.invmap[st0.db.iorind]
+        # In the mixed state space, the solvent bias comes due only to the omega3(dissociation) jumps.
 
-                self.biases_solute_vs[i] += np.dot(self.bias2_solute_new[i - Nvstars_pure, :], omega2escape[dbwyck2, :]) * \
-                                     prob_sqrt_mixed_vs[i - Nvstars_pure]
+        # if not eta2shift:
+        # the bias2_new tensors won't be all zeros
+        for i in range(Nvstars_pure, Nvstars):
+            st0 = self.vkinetic.vecpos[i][0]
+            dbwyck2 = self.mdbcontainer.invmap[st0.db.iorind]
 
-                self.biases_solvent_vs[i] += np.dot(self.bias2_solvent_new[i - Nvstars_pure, :], omega2escape[dbwyck2, :]) * \
-                                      prob_sqrt_mixed_vs[i - Nvstars_pure]
+            self.biases_solute_vs[i] += np.dot(self.bias2_solute_new[i - Nvstars_pure, :], omega2escape[dbwyck2, :]) * \
+                                 prob_sqrt_mixed_vs[i - Nvstars_pure]
+
+            self.biases_solvent_vs[i] += np.dot(self.bias2_solvent_new[i - Nvstars_pure, :], omega2escape[dbwyck2, :]) * \
+                                  prob_sqrt_mixed_vs[i - Nvstars_pure]
 
         # Next, we create the gamma vector, projected onto the vector stars
         self.gamma_solute_vs = np.dot(GF_total, self.biases_solute_vs)
@@ -2715,8 +2716,7 @@ class dumbbellMediated():
         D0expansion_bb, (D1expansion_aa, D1expansion_bb, D1expansion_ab), \
         (D2expansion_aa, D2expansion_bb, D2expansion_ab), \
         (D3expansion_aa, D3expansion_bb, D3expansion_ab), \
-        (D4expansion_aa, D4expansion_bb, D4expansion_ab) = self.bareExpansion(self.eta0total_solute,
-                                                                              self.eta0total_solvent)
+        (D4expansion_aa, D4expansion_bb, D4expansion_ab) = self.bareExpansion(self.eta0total_solvent)
 
         L_uc_aa = np.dot(D1expansion_aa, prob_om1) + np.dot(D2expansion_aa, prob_om2) + \
                   np.dot(D3expansion_aa, prob_om3) + np.dot(D4expansion_aa, prob_om4)
