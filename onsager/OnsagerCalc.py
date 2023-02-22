@@ -2047,8 +2047,12 @@ class dumbbellMediated():
                     continue
                 # self.delbias1expansion_solute[i, jt] += len(self.vkinetic.vecpos[i]) * np.sum(
                 #     np.dot(initindexdict[st0], eta_proj_solute))
-                self.delbias1expansion_solvent[i, jt] += len(self.vkinetic.vecpos[i]) * np.sum(
-                    np.dot(initindexdict[st0], eta_proj_solvent))
+                else:
+                    FSList = initindexdict[st0]
+                    for FS in FSList:
+                        self.delbias1expansion_solvent[i, jt] += len(self.vkinetic.vecpos[i]) *\
+                            np.dot(v0, self.eta0total_solvent[st0] - self.eta0total_solvent[FS])
+
             # Now let's build it for omega4
             for jt, initindexdict in enumerate(self.jtags4):
                 # see if there's an array corresponding to the initial state
@@ -2056,8 +2060,11 @@ class dumbbellMediated():
                     continue
                 # self.delbias4expansion_solute[i, jt] += len(self.vkinetic.vecpos[i]) * np.sum(
                 #     np.dot(initindexdict[st0], eta_proj_solute))
-                self.delbias4expansion_solvent[i, jt] += len(self.vkinetic.vecpos[i]) * np.sum(
-                    np.dot(initindexdict[st0], eta_proj_solvent))
+                else:
+                    FSList = initindexdict[st0]
+                    for FS in FSList:
+                        self.delbias4expansion_solvent[i, jt] += len(self.vkinetic.vecpos[i]) *\
+                            np.dot(v0, self.eta0total_solvent[st0] - self.eta0total_solvent[FS])
 
         for i in range(self.vkinetic.Nvstars - self.vkinetic.Nvstars_pure):
             # get the representative state(its index in mixedstates) and vector
@@ -2072,12 +2079,17 @@ class dumbbellMediated():
 
             for jt, initindexdict in enumerate(self.jtags3):
                 # see if there's an array corresponding to the initial state
-                if not st0 in initindexdict:
+                if not (st0 + len(self.vkinetic.starset.complexStates)) in initindexdict:
                     continue
                 # self.delbias3expansion_solute[i, jt] += len(self.vkinetic.vecpos[i + self.vkinetic.Nvstars_pure]) * \
                 #                                         np.sum(np.dot(initindexdict[st0], eta_proj_solute))
-                self.delbias3expansion_solvent[i, jt] += len(self.vkinetic.vecpos[i + self.vkinetic.Nvstars_pure]) * \
-                                                         np.sum(np.dot(initindexdict[st0], eta_proj_solvent))
+                else:
+                    FSList = initindexdict[st0 + len(self.vkinetic.starset.complexStates)]
+                    for FS in FSList:
+                        self.delbias3expansion_solvent[i, jt] += len(self.vkinetic.vecpos[i + self.vkinetic.Nvstars_pure]) * \
+                                                                 np.dot(v0, self.eta0total_solvent[st0 + len(self.vkinetic.starset.complexStates)] -
+                                                                        self.eta0total_solvent[FS])
+
 
     def update_bias_expansions(self, rate0list, omega0escape): #, rate2list, omega2escape):
         self.calc_eta(rate0list, omega0escape) #, rate2list, omega2escape)

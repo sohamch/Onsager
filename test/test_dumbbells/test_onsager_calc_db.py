@@ -420,14 +420,15 @@ class test_dumbbell_mediated(unittest.TestCase):
 
         # Now, we check eta vectors for omega1
         bias1solute, bias1solvent = self.biases[1]
-        bias1_solute_vs = np.array([np.dot(bias1solute[i, :], rate1_stars[i, :])
-                                    for i in range(self.onsagercalculator.vkinetic.Nvstars_pure)])
+        self.assertTrue(bias1solute is None)
+        # bias1_solute_vs = np.array([np.dot(bias1solute[i, :], rate1_stars[i, :])
+        #                             for i in range(self.onsagercalculator.vkinetic.Nvstars_pure)])
 
         bias1_solvent_vs = np.array([np.dot(bias1solvent[i, :], rate1_stars[i, :])
                                      for i in range(self.onsagercalculator.vkinetic.Nvstars_pure)])
 
         # Now, convert this into the Nstates x 3 form
-        solute_vel_1 = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
+        # solute_vel_1 = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         solvent_vel_1 = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         for i, state in enumerate(self.onsagercalculator.vkinetic.starset.complexStates):
             try:
@@ -436,9 +437,9 @@ class test_dumbbell_mediated(unittest.TestCase):
                 indlist = []
                 self.assertTrue(state.is_zero(self.onsagercalculator.pdbcontainer))
             # We have indlist as (IndOfStar, IndOfState)
-            solute_vel_1[i, :] = sum([bias1_solute_vs[vstarind] *
-                                      self.onsagercalculator.vkinetic.vecvec[vstarind][invstarind]
-                                       for vstarind, invstarind in indlist])
+            # solute_vel_1[i, :] = sum([bias1_solute_vs[vstarind] *
+            #                           self.onsagercalculator.vkinetic.vecvec[vstarind][invstarind]
+            #                            for vstarind, invstarind in indlist])
 
             solvent_vel_1[i, :] = sum([bias1_solvent_vs[vstarind] *
                                        self.onsagercalculator.vkinetic.vecvec[vstarind][invstarind]
@@ -455,13 +456,13 @@ class test_dumbbell_mediated(unittest.TestCase):
                                                              self.onsagercalculator.eta00_solvent[FS, :])
 
         # Now, get the version from the updated expansion
-        vel1_solute_new_vs = np.array([np.dot(self.onsagercalculator.bias1_solute_new[i, :], rate1_stars[i, :])
-                                        for i in range(self.onsagercalculator.vkinetic.Nvstars_pure)])
+        # vel1_solute_new_vs = np.array([np.dot(self.onsagercalculator.bias1_solute_new[i, :], rate1_stars[i, :])
+        #                                 for i in range(self.onsagercalculator.vkinetic.Nvstars_pure)])
 
         vel1_solvent_new_vs = np.array([np.dot(self.onsagercalculator.bias1_solvent_new[i, :], rate1_stars[i, :])
                                          for i in range(self.onsagercalculator.vkinetic.Nvstars_pure)])
 
-        solute_vel_1_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
+        # solute_vel_1_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         solvent_vel_1_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         for i, state in enumerate(self.onsagercalculator.vkinetic.starset.complexStates):
             try:
@@ -470,14 +471,14 @@ class test_dumbbell_mediated(unittest.TestCase):
                 indlist = []
                 self.assertTrue(state.is_zero(self.onsagercalculator.pdbcontainer))
 
-            solute_vel_1_new[i, :] = sum([vel1_solute_new_vs[tup[0]] *
-                                           self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]] for tup in indlist])
+            # solute_vel_1_new[i, :] = sum([vel1_solute_new_vs[tup[0]] *
+            #                                self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]] for tup in indlist])
             solvent_vel_1_new[i, :] = sum([vel1_solvent_new_vs[tup[0]] *
                                             self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]] for tup in indlist])
 
         # Check that they are the same
-        self.assertTrue(np.allclose(solute_vel_1, solute_vel_1_new))
-        self.assertTrue(np.allclose(solute_vel_1, np.zeros_like(solute_vel_1)))
+        # self.assertTrue(np.allclose(solute_vel_1, solute_vel_1_new))
+        # self.assertTrue(np.allclose(solute_vel_1, np.zeros_like(solute_vel_1)))
         self.assertTrue(np.allclose(solvent_vel_1, solvent_vel_1_new), msg="{} \n{}".format(solvent_vel_1, solvent_vel_1_new))
 
         # For the kinetic shell, we check that for states in the thermodynamic shell,
@@ -537,8 +538,8 @@ class test_dumbbell_mediated(unittest.TestCase):
 
         # Get the omega1 contribution to the non-local bias vectors
         # First check that there is no movement in the solutes
-        self.assertTrue(np.allclose(self.onsagercalculator.bias1_solute_new,
-                                    np.zeros_like(self.onsagercalculator.bias1_solute_new)))
+        # self.assertTrue(np.allclose(self.onsagercalculator.bias1_solute_new,
+        #                             np.zeros_like(self.onsagercalculator.bias1_solute_new)))
 
         vel10_solvent_new_vs = \
             np.array([np.dot(self.onsagercalculator.bias1_solvent_new[i, :], rate10_stars[i, :])
@@ -646,12 +647,12 @@ class test_dumbbell_mediated(unittest.TestCase):
 
         # Now, do it for omega3
         bias3solute, bias3solvent = self.biases[3]
+        self.assertTrue(bias3solute is None)
+        # self.assertTrue(np.allclose(bias3solute, 0))
 
-        self.assertTrue(np.allclose(bias3solute, 0))
-
-        vel3_solute_vs = np.array([np.dot(bias3solute[i - Nvstars_pure, :], rate3_stars[i - Nvstars_pure, :])
-                                  for i in range(Nvstars_pure, self.onsagercalculator.vkinetic.Nvstars)])
-        self.assertTrue(np.allclose(vel3_solute_vs, 0))
+        # vel3_solute_vs = np.array([np.dot(bias3solute[i - Nvstars_pure, :], rate3_stars[i - Nvstars_pure, :])
+        #                           for i in range(Nvstars_pure, self.onsagercalculator.vkinetic.Nvstars)])
+        # self.assertTrue(np.allclose(vel3_solute_vs, 0))
 
         vel3_solvent_vs = np.array([np.dot(bias3solvent[i - Nvstars_pure, :], rate3_stars[i - Nvstars_pure, :])
                                    for i in range(Nvstars_pure, self.onsagercalculator.vkinetic.Nvstars)])
@@ -674,39 +675,39 @@ class test_dumbbell_mediated(unittest.TestCase):
                 solvent_vel_3[IS, :] += rate3list[jt][jnum] * (- self.onsagercalculator.eta00_solvent[FS]) # self.onsagercalculator.eta02_solvent[IS]
 
         # Now, get the version from the updated expansion
-        vel3_solute_new_vs = np.array([np.dot(self.onsagercalculator.bias3_solute_new[i - Nvstars_pure, :],
-                                              rate3_stars[i - Nvstars_pure, :])
-                                       for i in range(Nvstars_pure, self.onsagercalculator.vkinetic.Nvstars)])
+        # vel3_solute_new_vs = np.array([np.dot(self.onsagercalculator.bias3_solute_new[i - Nvstars_pure, :],
+        #                                       rate3_stars[i - Nvstars_pure, :])
+        #                                for i in range(Nvstars_pure, self.onsagercalculator.vkinetic.Nvstars)])
         vel3_solvent_new_vs = np.array([np.dot(self.onsagercalculator.bias3_solvent_new[i - Nvstars_pure, :],
                                                rate3_stars[i - Nvstars_pure, :])
                                         for i in range(Nvstars_pure, self.onsagercalculator.vkinetic.Nvstars)])
 
-        solute_vel_3_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.mixedstates), self.onsagercalculator.crys.dim))
+        # solute_vel_3_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.mixedstates), self.onsagercalculator.crys.dim))
         solvent_vel_3_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.mixedstates), self.onsagercalculator.crys.dim))
 
         for i, state in enumerate(self.onsagercalculator.vkinetic.starset.mixedstates):
             indlist = self.onsagercalculator.vkinetic.stateToVecStar_mixed[state]
             # We have indlist as (IndOfStar, IndOfState)
-            solute_vel_3_new[i, :] = sum([vel3_solute_new_vs[tup[0] - Nvstars_pure] *
-                                          self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]] for tup in indlist])
+            # solute_vel_3_new[i, :] = sum([vel3_solute_new_vs[tup[0] - Nvstars_pure] *
+            #                               self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]] for tup in indlist])
             solvent_vel_3_new[i, :] = sum([vel3_solvent_new_vs[tup[0] - Nvstars_pure] *
                                            self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]] for tup in indlist])
 
-        self.assertTrue(np.allclose(solute_vel_3, solute_vel_3_new))
+        # self.assertTrue(np.allclose(solute_vel_3, solute_vel_3_new))
         self.assertTrue(np.allclose(solvent_vel_3, solvent_vel_3_new))
 
         #Now, do it for omega4
         bias4solute, bias4solvent = self.biases[4]
         bias3solute, bias3solvent = self.biases[3]
 
-        self.assertTrue(np.allclose(bias4solute, 0))
+        self.assertTrue(bias4solute is None)
 
-        vel4_solute_vs = np.array([np.dot(bias4solute[i, :], rate4_stars[i, :]) for i in range(Nvstars_pure)])
+        # vel4_solute_vs = np.array([np.dot(bias4solute[i, :], rate4_stars[i, :]) for i in range(Nvstars_pure)])
 
         vel4_solvent_vs = np.array([np.dot(bias4solvent[i, :], rate4_stars[i, :]) for i in range(Nvstars_pure)])
 
         # Now, convert this into the Nstates x 3 form in the mixed state space
-        solute_vel_4 = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
+        # solute_vel_4 = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         solvent_vel_4 = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
 
         for i, state in enumerate(self.onsagercalculator.vkinetic.starset.complexStates):
@@ -716,40 +717,40 @@ class test_dumbbell_mediated(unittest.TestCase):
                 indlist = []
                 self.assertTrue(state.is_zero(self.onsagercalculator.pdbcontainer))
 
-            solute_vel_4[i, :] = sum([vel4_solute_vs[tup[0]] * self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]]
-                                     for tup in indlist])
+            # solute_vel_4[i, :] = sum([vel4_solute_vs[tup[0]] * self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]]
+            #                          for tup in indlist])
             solvent_vel_4[i, :] = sum([vel4_solvent_vs[tup[0]] * self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]]
                                        for tup in indlist])
 
         # check against explicit evaluation
-        solute_vel_4_direct = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates),
-                                        self.onsagercalculator.crys.dim))
+        # solute_vel_4_direct = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates),
+        #                                 self.onsagercalculator.crys.dim))
         solvent_vel_4_direct = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates),
                                          self.onsagercalculator.crys.dim))
         for jt, jlist in enumerate(self.onsagercalculator.jnet4_indexed):
             for jnum, ((IS, FS), dx) in enumerate(jlist):
                 # or2 = self.onsagercalculator.mdbcontainer.iorlist[FS][1]
-                dx_solute = np.zeros(self.onsagercalculator.crys.dim)  # or2/2.
+                # dx_solute = np.zeros(self.onsagercalculator.crys.dim)  # or2/2.
                 dx_solvent = dx  # - or2/2.
-                solute_vel_4_direct[IS, :] += rate4list[jt][jnum] * dx_solute
+                # solute_vel_4_direct[IS, :] += rate4list[jt][jnum] * dx_solute
                 solvent_vel_4_direct[IS, :] += rate4list[jt][jnum] * dx_solvent
-        self.assertTrue(np.allclose(solute_vel_4_direct, solute_vel_4))
+        # self.assertTrue(np.allclose(solute_vel_4_direct, solute_vel_4))
         self.assertTrue(np.allclose(solvent_vel_4_direct, solvent_vel_4))
         # Next, manually update with the eta0 vectors
         for jt,jlist in enumerate(self.onsagercalculator.jnet4_indexed):
             for jnum, ((IS, FS), dx) in enumerate(jlist):
-                solute_vel_4[IS, :] += rate4list[jt][jnum] * self.onsagercalculator.eta00_solute[IS] #-
+                # solute_vel_4[IS, :] += rate4list[jt][jnum] * self.onsagercalculator.eta00_solute[IS] #-
                                                               #self.onsagercalculator.eta02_solute[FS])
                 solvent_vel_4[IS, :] += rate4list[jt][jnum] * self.onsagercalculator.eta00_solvent[IS] #-
                                                                #self.onsagercalculator.eta02_solvent[FS])
 
         # Now, get the version from the updated expansion
-        vel4_solute_new_vs = np.array([np.dot(self.onsagercalculator.bias4_solute_new[i, :], rate4_stars[i, :])
-                                   for i in range(Nvstars_pure)])
+        # vel4_solute_new_vs = np.array([np.dot(self.onsagercalculator.bias4_solute_new[i, :], rate4_stars[i, :])
+        #                            for i in range(Nvstars_pure)])
         vel4_solvent_new_vs = np.array([np.dot(self.onsagercalculator.bias4_solvent_new[i, :], rate4_stars[i, :])
                                     for i in range(Nvstars_pure)])
 
-        solute_vel_4_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
+        # solute_vel_4_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         solvent_vel_4_new = np.zeros((len(self.onsagercalculator.vkinetic.starset.complexStates), self.onsagercalculator.crys.dim))
         for i, state in enumerate(self.onsagercalculator.vkinetic.starset.complexStates):
             try:
@@ -758,12 +759,12 @@ class test_dumbbell_mediated(unittest.TestCase):
                 indlist = []
                 self.assertTrue(state.is_zero(self.onsagercalculator.pdbcontainer))
 
-            solute_vel_4_new[i, :] = sum([vel4_solute_new_vs[tup[0]] *
-                                          self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]] for tup in indlist])
+            # solute_vel_4_new[i, :] = sum([vel4_solute_new_vs[tup[0]] *
+            #                               self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]] for tup in indlist])
             solvent_vel_4_new[i, :] = sum([vel4_solvent_new_vs[tup[0]] *
                                            self.onsagercalculator.vkinetic.vecvec[tup[0]][tup[1]] for tup in indlist])
 
-        self.assertTrue(np.allclose(solute_vel_4, solute_vel_4_new))
+        # self.assertTrue(np.allclose(solute_vel_4, solute_vel_4_new))
         self.assertTrue(np.allclose(solvent_vel_4, solvent_vel_4_new))
 
     def test_uncorrelated_del_om(self):
