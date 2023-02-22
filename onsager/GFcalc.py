@@ -19,6 +19,7 @@ import itertools
 from copy import deepcopy
 from numpy import linalg as LA
 import scipy as sp
+from scipy import linalg as spla
 from scipy.special import hyp1f1, gamma, expi #, gammainc
 
 # two quick shortcuts
@@ -360,7 +361,7 @@ class GFCrystalcalc(object):
                                     for n in range(self.Ndiff))
             else:
                 # invert, subtract off Taylor expansion to leave semicontinuum piece
-                gsc_qij[qind] = sp.linalg.pinvh(self.omega_qij[qind, :, :], rcond=1e-10) \
+                gsc_qij[qind] = spla.pinvh(self.omega_qij[qind, :, :], rtol=1e-10) \
                                 - self.g_Taylor(np.dot(self.pqtrans, q), g_Taylor_fnlp)
         # 6. Slice the pieces we want for fast(er) evaluation (since we specify i and j in evaluation)
         self.gsc_ijq = np.zeros((self.N, self.N, self.Nkpt), dtype=complex)
