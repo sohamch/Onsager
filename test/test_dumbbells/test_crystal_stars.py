@@ -350,6 +350,8 @@ class test_StarSet(unittest.TestCase):
 
                 crys_stars = DBStarSet(pdbcontainer2d, mdbcontainer2d, jset02d, jset22d, Nshells=1)
 
+            # print(len(crys_stars.complexStates))
+
             for jmplist in crys_stars.jnet0:
                 for jmp in jmplist:
                     self.assertTrue(isinstance(jmp.state1, dumbbell), msg="\n{}".format(struct))
@@ -357,16 +359,30 @@ class test_StarSet(unittest.TestCase):
             (omega1_network, omega1_indexed, omega1tag), om1types = crys_stars.jumpnetwork_omega1()
             for jlist, initdict in zip(omega1_indexed, omega1tag):
                 for IS, jtag in initdict.items():
-                    # go through the rows of the jtag:
-                    for row in range(len(jtag)):
-                        self.assertTrue(jtag[row][IS] == 1)
-                        for column in range(len(crys_stars.complexStates) + len(crys_stars.mixedstates)):
-                            if jtag[row][column] == -1:
-                                count = 0
-                                for (i, j), dx in jlist:
-                                    if i == IS and j == column:
-                                        count += 1
-                                self.assertTrue(count, 1)
+                    FSCount = defaultdict(int)
+                    for (i, j), dx in jlist:
+                        if i == IS:
+                            FSCount[j] += 1
+
+                    FSCount_tag = defaultdict(int)
+                    for FS in jtag:
+                        FSCount_tag[FS] += 1
+
+                    FSCount = dict(FSCount)
+                    FSCount_tag = dict(FSCount_tag)
+
+                    for FS, count in FSCount_tag.items():
+                        self.assertEqual(FSCount[FS], count)
+                    # # go through the rows of the jtag:
+                    # for row in range(len(jtag)):
+                    #     self.assertTrue(jtag[row][IS] == 1)
+                    #     for column in range(len(crys_stars.complexStates) + len(crys_stars.mixedstates)):
+                    #         if jtag[row][column] == -1:
+                    #             count = 0
+                    #             for (i, j), dx in jlist:
+                    #                 if i == IS and j == column:
+                    #                     count += 1
+                    #             self.assertTrue(count, 1)
 
             rotset = set([])  # Here we will store the rotational jumps in the network
             rotInd = []
@@ -591,16 +607,32 @@ class test_StarSet(unittest.TestCase):
             # First, omega4
             for jlist, initdict in zip(omega4_network_indexed, omega4tag):
                 for IS, jtag in initdict.items():
-                    # go through the rows of the jtag:
-                    for row in range(len(jtag)):
-                        self.assertTrue(jtag[row][IS] == 1)
-                        for column in range(len(crys_stars.complexStates) + len(crys_stars.mixedstates)):
-                            if jtag[row][column] == -1:
-                                count = 0
-                                for (i, j), dx in jlist:
-                                    if i == IS and j == column - len(crys_stars.complexStates):
-                                        count += 1
-                                self.assertTrue(count, 1)
+                    FSCount = defaultdict(int)
+                    for (i, j), dx in jlist:
+                        if i == IS:
+                            self.assertTrue(j + len(crys_stars.complexStates) in jtag,
+                                            msg="{}\n{}\n{}".format((i, j), jtag, len(crys_stars.complexStates) ))
+                            FSCount[j + len(crys_stars.complexStates)] += 1
+
+                    FSCount_tag = defaultdict(int)
+                    for FS in jtag:
+                        FSCount_tag[FS] += 1
+
+                    FSCount = dict(FSCount)
+                    FSCount_tag = dict(FSCount_tag)
+
+                    for FS, count in FSCount_tag.items():
+                        self.assertEqual(FSCount[FS], count)
+                    # # go through the rows of the jtag:
+                    # for row in range(len(jtag)):
+                    #     self.assertTrue(jtag[row][IS] == 1)
+                    #     for column in range(len(crys_stars.complexStates) + len(crys_stars.mixedstates)):
+                    #         if jtag[row][column] == -1:
+                    #             count = 0
+                    #             for (i, j), dx in jlist:
+                    #                 if i == IS and j == column - len(crys_stars.complexStates):
+                    #                     count += 1
+                    #             self.assertTrue(count, 1)
 
                             # if jtag[row][column] == -1:
                             #     self.assertTrue(
@@ -609,16 +641,39 @@ class test_StarSet(unittest.TestCase):
             # Next, omega3
             for jlist, initdict in zip(omega3_network_indexed, omega3tag):
                 for IS, jtag in initdict.items():
-                    # go through the rows of the jtag:
-                    for row in range(len(jtag)):
-                        self.assertTrue(jtag[row][IS + len(crys_stars.complexStates)] == 1)
-                        for column in range(len(crys_stars.complexStates) + len(crys_stars.mixedstates)):
-                            if jtag[row][column] == -1:
-                                count = 0
-                                for (i, j), dx in jlist:
-                                    if i == IS and j == column:
-                                        count += 1
-                                self.assertTrue(count, 1)
+                    FSCount = defaultdict(int)
+                    foundcount = 0
+                    jFound = []
+                    for (i, j), dx in jlist:
+                        if i + len(crys_stars.complexStates) == IS:
+                            self.assertTrue(j in jtag, msg="\n{}\n{}".format(j, jtag))
+                            foundcount += 1
+                            # print(j)
+                            jFound.append(j)
+                            FSCount[j] += 1
+
+                    self.assertTrue(foundcount == len(jtag))
+
+                    FSCount_tag = defaultdict(int)
+                    for FS in jtag:
+                        FSCount_tag[FS] += 1
+
+                    FSCount = dict(FSCount)
+                    FSCount_tag = dict(FSCount_tag)
+                    # print(foundcount, jFound, FSCount, FSCount_tag, jtag)
+                    # print()
+                    for FS, count in FSCount_tag.items():
+                        self.assertEqual(FSCount[FS], count, msg="\n{}\n{}\n{}\n{}\n{}".format(jtag, FS, count, FSCount, FSCount_tag))
+                    # # go through the rows of the jtag:
+                    # for row in range(len(jtag)):
+                    #     self.assertTrue(jtag[row][IS + len(crys_stars.complexStates)] == 1)
+                    #     for column in range(len(crys_stars.complexStates) + len(crys_stars.mixedstates)):
+                    #         if jtag[row][column] == -1:
+                    #             count = 0
+                    #             for (i, j), dx in jlist:
+                    #                 if i == IS and j == column:
+                    #                     count += 1
+                    #             self.assertTrue(count, 1)
                             # if jtag[row][column] == -1:
                             #     self.assertTrue(any(i == IS and j == column for (i, j), dx in jlist))
             # Next, omega2 to mixedstates
@@ -635,20 +690,38 @@ class test_StarSet(unittest.TestCase):
 
             for jlist, initdict in zip(jnet2stateindex, crys_stars.jtags2):
                 for IS, jtag in initdict.items():
-                    # go through the rows of the jtag:
-                    for row in range(len(jtag)):
-                        # The column corresponding to the intial state must have 1.
-                        self.assertTrue(jtag[row][IS + len(crys_stars.complexStates)] == 1 or jtag[row][
-                            IS + len(crys_stars.complexStates)] == 0,
-                                        msg="{}".format(jtag[row][IS + len(crys_stars.complexStates)]))
-                        # the zero appears when the intial and final states are the same (but just translated in the lattice) so that they have the same periodic eta vector
-                        for column in range(len(crys_stars.complexStates) + len(crys_stars.mixedstates)):
-                            if jtag[row][column] == -1:
-                                count = 0
-                                for (i, j), dx in jlist:
-                                    if i == IS and j == column - len(crys_stars.complexStates):
-                                        count += 1
-                                self.assertTrue(count, 1)
+                    FSCount = defaultdict(int)
+                    for (i, j), dx in jlist:
+                        if i + len(crys_stars.complexStates) == IS:
+                            self.assertTrue(j + len(crys_stars.complexStates) in jtag,
+                                            msg="{}\n{}\n{}".format((i, j), jtag, len(crys_stars.complexStates)))
+                            FSCount[j + len(crys_stars.complexStates)] += 1
+
+                    FSCount_tag = defaultdict(int)
+                    for FS in jtag:
+                        FSCount_tag[FS] += 1
+
+                    FSCount = dict(FSCount)
+                    FSCount_tag = dict(FSCount_tag)
+
+                    self.assertEqual(len(FSCount), len(FSCount_tag))
+
+                    for FS, count in FSCount_tag.items():
+                        self.assertEqual(FSCount[FS], count)
+                    # # go through the rows of the jtag:
+                    # for row in range(len(jtag)):
+                    #     # The column corresponding to the intial state must have 1.
+                    #     self.assertTrue(jtag[row][IS + len(crys_stars.complexStates)] == 1 or jtag[row][
+                    #         IS + len(crys_stars.complexStates)] == 0,
+                    #                     msg="{}".format(jtag[row][IS + len(crys_stars.complexStates)]))
+                    #     # the zero appears when the intial and final states are the same (but just translated in the lattice) so that they have the same periodic eta vector
+                    #     for column in range(len(crys_stars.complexStates) + len(crys_stars.mixedstates)):
+                    #         if jtag[row][column] == -1:
+                    #             count = 0
+                    #             for (i, j), dx in jlist:
+                    #                 if i == IS and j == column - len(crys_stars.complexStates):
+                    #                     count += 1
+                    #             self.assertTrue(count, 1)
                                 # self.assertTrue(
                                 #     any(i == IS and j == column - len(crys_stars.complexStates) for (i, j), dx in
                                 #         jlist))

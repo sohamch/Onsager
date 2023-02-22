@@ -1411,14 +1411,16 @@ class DBStarSet(object):
         for initdict in j2initlist:
             jtagdict = {}
             for IS, lst in initdict.items():
-                jarr = np.zeros((len(lst), len(self.complexStates) + len(self.mixedstates)), dtype=int)
+                # jarr = np.zeros((len(lst), len(self.complexStates) + len(self.mixedstates)), dtype=int)
+                FSList = []
                 for idx, FS in enumerate(lst):
-                    if IS == FS:
-                        # jarr[idx][IS+len(self.complexStates)]= 1
-                        continue
-                    jarr[idx][IS + len(self.complexStates)] += 1
-                    jarr[idx][FS + len(self.complexStates)] -= 1
-                jtagdict[IS] = jarr.copy()
+                    # if IS == FS:
+                    #     # jarr[idx][IS+len(self.complexStates)]= 1
+                    #     continue
+                    # jarr[idx][IS + len(self.complexStates)] += 1
+                    # jarr[idx][FS + len(self.complexStates)] -= 1
+                    FSList.append(FS + len(self.complexStates))
+                jtagdict[IS + len(self.complexStates)] = [s for s in FSList]
             self.jtags2.append(jtagdict)
         print("built jtags2: {}".format(time.time() - start))
 
@@ -1596,11 +1598,13 @@ class DBStarSet(object):
         for initdict in initstates:
             arrdict = {}
             for IS, lst in initdict.items():
-                jtagarr = np.zeros((len(lst), len(self.complexStates) + len(self.mixedstates)), dtype=int)
+                # jtagarr = np.zeros((len(lst), len(self.complexStates) + len(self.mixedstates)), dtype=int)
+                FSList = []
                 for jnum, FS in enumerate(lst):
-                    jtagarr[jnum][IS] += 1
-                    jtagarr[jnum][FS] -= 1
-                arrdict[IS] = jtagarr.copy()
+                    # jtagarr[jnum][IS] += 1
+                    # jtagarr[jnum][FS] -= 1
+                    FSList.append(FS)
+                arrdict[IS] = [s for s in FSList] #jtagarr.copy()
             jtags.append(arrdict)
 
         return (jumpnetwork, jumpindexed, jtags), jumptype
@@ -1739,21 +1743,25 @@ class DBStarSet(object):
         for initdict in omega4inits:
             jarrdict = {}
             for IS, lst in initdict.items():
-                jarr = np.zeros((len(lst), len(self.complexStates) + len(self.mixedstates)), dtype=int)
+                # jarr = np.zeros((len(lst), len(self.complexStates) + len(self.mixedstates)), dtype=int)
+                FSList = []
                 for idx, FS in enumerate(lst):
-                    jarr[idx][IS] += 1
-                    jarr[idx][FS + len(self.complexStates)] -= 1
-                jarrdict[IS] = jarr.copy()
+                    # jarr[idx][IS] += 1
+                    # jarr[idx][FS + len(self.complexStates)] -= 1
+                    FSList.append(FS + len(self.complexStates))
+                jarrdict[IS] = [s for s in FSList] #jarr.copy()
             jtags4.append(jarrdict)
 
         for initdict in omega3inits:
             jarrdict = {}
             for IS, lst in initdict.items():
-                jarr = np.zeros((len(lst), len(self.complexStates) + len(self.mixedstates)), dtype=int)
+                FSList = []
+                # jarr = np.zeros((len(lst), len(self.complexStates) + len(self.mixedstates)), dtype=int)
                 for idx, FS in enumerate(lst):
-                    jarr[idx][IS + len(self.complexStates)] += 1
-                    jarr[idx][FS] -= 1
-                jarrdict[IS] = jarr.copy()
+                    # jarr[idx][IS + len(self.complexStates)] += 1
+                    # jarr[idx][FS] -= 1
+                    FSList.append(FS)
+                jarrdict[IS + len(self.complexStates)] = [s for s in FSList] #jarr.copy()
             jtags3.append(jarrdict)
 
         return (symjumplist_omega43_all, symjumplist_omega43_all_indexed), (

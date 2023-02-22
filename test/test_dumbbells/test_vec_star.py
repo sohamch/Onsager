@@ -718,7 +718,7 @@ class test_vecstars(unittest.TestCase):
             for (i, j), dx in jindlist:
                 count_dict[i] += 1
             for key, arr in self.om2tags[jt].items():
-                self.assertEqual(len(arr), count_dict[key])
+                self.assertEqual(len(arr), count_dict[key - len(self.vec_stars.starset.complexStates)])
 
         for jt, jlist, jindlist in zip(itertools.count(), self.symjumplist_omega4, self.symjumplist_omega4_indexed):
             # indDictlist = self.om1tags[jt]
@@ -734,7 +734,7 @@ class test_vecstars(unittest.TestCase):
             for (i, j), dx in jindlist:
                 count_dict[i] += 1
             for key, arr in self.om3tags[jt].items():
-                self.assertEqual(len(arr), count_dict[key])
+                self.assertEqual(len(arr), count_dict[key - len(self.vec_stars.starset.complexStates)])
 
     def test_GFstars(self):
         # Check that every possible pair has been considered in the gfstarsets
