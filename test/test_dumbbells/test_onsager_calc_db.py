@@ -873,12 +873,12 @@ class test_dumbbell_mediated(unittest.TestCase):
                 # o2 = self.onsagercalculator.mdbcontainer.iorlist[
                 #     self.onsagercalculator.vkinetic.starset.mixedstates[FS].db.iorind][1]
 
-                # dx_solute = dx + eta0total_solute[IS + Ncomp] - eta0total_solute[FS + Ncomp]  #- o1/2. + o2/2.
+                dx_solute = dx #+ eta0total_solute[IS + Ncomp] - eta0total_solute[FS + Ncomp]  #- o1/2. + o2/2.
                 dx_solvent = dx + eta0total_solvent[IS + Ncomp] - eta0total_solvent[FS + Ncomp]  #+ o1/2. - o2/2.
 
-                # L_uc_om2_test_aa += np.outer(dx_solute, dx_solute)* prob_om2[jt] * 0.5
+                L_uc_om2_test_aa += np.outer(dx_solute, dx_solute)* prob_om2[jt] * 0.5
                 L_uc_om2_test_bb += np.outer(dx_solvent, dx_solvent) * prob_om2[jt] * 0.5
-                # L_uc_om2_test_ab += np.outer(dx_solute, dx_solvent) * prob_om2[jt] * 0.5
+                L_uc_om2_test_ab += np.outer(dx_solute, dx_solvent) * prob_om2[jt] * 0.5
 
         self.assertTrue(np.allclose(L_uc_om2_test_aa, L_uc_om2_aa))
         self.assertTrue(np.allclose(L_uc_om2_test_bb, L_uc_om2_bb))
