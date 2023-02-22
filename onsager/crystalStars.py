@@ -2067,17 +2067,17 @@ class DBVectorStars(object):
         # Expansion of pure dumbbell initial state bias vectors and complex state bias vectors
         bias0expansion = np.zeros((self.Nvstars_pure, len(self.starset.jumpindices)))
         bias1expansion_solvent = np.zeros((self.Nvstars_pure, len(jumpnetwork_omega1)))
-        bias1expansion_solute = np.zeros((self.Nvstars_pure, len(jumpnetwork_omega1)))
+        # bias1expansion_solute = np.zeros((self.Nvstars_pure, len(jumpnetwork_omega1)))
 
         bias4expansion_solvent = np.zeros((self.Nvstars_pure, len(jumpnetwork_omega34)))
-        bias4expansion_solute = np.zeros((self.Nvstars_pure, len(jumpnetwork_omega34)))
+        # bias4expansion_solute = np.zeros((self.Nvstars_pure, len(jumpnetwork_omega34)))
 
         # Expansion of mixed dumbbell initial state bias vectors.
         bias2expansion_solvent = np.zeros((self.Nvstars - self.Nvstars_pure, len(jumpnetwork_omega2)))
         bias2expansion_solute = np.zeros((self.Nvstars - self.Nvstars_pure, len(jumpnetwork_omega2)))
 
         bias3expansion_solvent = np.zeros((self.Nvstars - self.Nvstars_pure, len(jumpnetwork_omega34)))
-        bias3expansion_solute = np.zeros((self.Nvstars - self.Nvstars_pure, len(jumpnetwork_omega34)))
+        # bias3expansion_solute = np.zeros((self.Nvstars - self.Nvstars_pure, len(jumpnetwork_omega34)))
 
         # First, let's build the periodic bias expansions
         for i, star, vectors in zip(itertools.count(), self.vecpos_bare, self.vecvec_bare):
@@ -2105,16 +2105,16 @@ class DBVectorStars(object):
                     if purestar[0] == IS:
                         # sees if there is a jump of the kth type with purestar[0] as the initial state.
                         dx = DB_disp(self.starset.pdbcontainer, j.state1, j.state2)
-                        dx_solute = z
+                        # dx_solute = z
                         dx_solvent = dx.copy()  # just for clarity that the solvent mass transport is dx itself.
 
                         geom_bias_solvent = np.dot(vectors[0], dx_solvent) * len(
                             purestar)  # should this be square root? check with tests.
-                        geom_bias_solute = np.dot(vectors[0], dx_solute) * len(purestar)
+                        # geom_bias_solute = np.dot(vectors[0], dx_solute) * len(purestar)
 
                         bias1expansion_solvent[
                             i, k] += geom_bias_solvent  # this is contribution of kth_type of omega_1 jumps, to the bias
-                        bias1expansion_solute[i, k] += geom_bias_solute
+                        # bias1expansion_solute[i, k] += geom_bias_solute
                         # vector along v_i
                         # so to find the total bias along v_i due to omega_1 jumps, we sum over k
                         bias0expansion[i, jt] += geom_bias_solvent  # These are the contributions of the omega_0 jumps
@@ -2131,11 +2131,11 @@ class DBVectorStars(object):
                     # for i, states, vectors in zip(itertools.count(),self.vecpos,self.vecvec):
                     if purestar[0] == IS:
                         dx = DB_disp4(self.starset.pdbcontainer, self.starset.mdbcontainer, j.state1, j.state2)
-                        dx_solute = z  # self.starset.mdbcontainer.iorlist[j.state2.db.iorind][1] / 2.
+                        # dx_solute = z  # self.starset.mdbcontainer.iorlist[j.state2.db.iorind][1] / 2.
                         dx_solvent = dx  # - self.starset.mdbcontainer.iorlist[j.state2.db.iorind][1] / 2.
-                        geom_bias_solute = np.dot(vectors[0], dx_solute) * len(purestar)
+                        # geom_bias_solute = np.dot(vectors[0], dx_solute) * len(purestar)
                         geom_bias_solvent = np.dot(vectors[0], dx_solvent) * len(purestar)
-                        bias4expansion_solute[i, k] += geom_bias_solute
+                        # bias4expansion_solute[i, k] += geom_bias_solute
                         # this is contribution of omega_4 jumps, to the bias
                         bias4expansion_solvent[i, k] += geom_bias_solvent
                         # vector along v_i
@@ -2177,23 +2177,25 @@ class DBVectorStars(object):
                             print(len(self.starset.pdbcontainer.iorlist), len(self.starset.mdbcontainer.iorlist))
                             print(j.state2.db.iorind, j.state1.db.iorind)
                             raise IndexError("list index out of range")
-                        dx_solute = z  # -self.starset.mdbcontainer.iorlist[j.state1.db.iorind][1] / 2.
+                        # dx_solute = z  # -self.starset.mdbcontainer.iorlist[j.state1.db.iorind][1] / 2.
                         dx_solvent = dx  # + self.starset.mdbcontainer.iorlist[j.state1.db.iorind][1] / 2.
-                        geom_bias_solute = np.dot(vectors[0], dx_solute) * len(mixedstar)
+                        # geom_bias_solute = np.dot(vectors[0], dx_solute) * len(mixedstar)
                         geom_bias_solvent = np.dot(vectors[0], dx_solvent) * len(mixedstar)
-                        bias3expansion_solute[i, k] += geom_bias_solute
+                        # bias3expansion_solute[i, k] += geom_bias_solute
                         bias3expansion_solvent[i, k] += geom_bias_solvent
 
-        if len(self.vecpos_bare) == 0:
-            return zeroclean(bias0expansion), (zeroclean(bias1expansion_solute), zeroclean(bias1expansion_solvent)), \
-                   (zeroclean(bias2expansion_solute), zeroclean(bias2expansion_solvent)), \
-                   (zeroclean(bias3expansion_solute), zeroclean(bias3expansion_solvent)), \
-                   (zeroclean(bias4expansion_solute), zeroclean(bias4expansion_solvent)), biasBareExpansion
-        else:
-            return zeroclean(bias0expansion), (zeroclean(bias1expansion_solute), zeroclean(bias1expansion_solvent)), \
-                   (zeroclean(bias2expansion_solute), zeroclean(bias2expansion_solvent)), \
-                   (zeroclean(bias3expansion_solute), zeroclean(bias3expansion_solvent)), \
-                   (zeroclean(bias4expansion_solute), zeroclean(bias4expansion_solvent)), zeroclean(biasBareExpansion)
+        if len(self.vecpos_bare) != 0:
+            biasBareExpansion = zeroclean(biasBareExpansion)
+        # if len(self.vecpos_bare) == 0:
+        #     return zeroclean(bias0expansion), (zeroclean(bias1expansion_solute), zeroclean(bias1expansion_solvent)), \
+        #            (zeroclean(bias2expansion_solute), zeroclean(bias2expansion_solvent)), \
+        #            (None, zeroclean(bias3expansion_solvent)), \
+        #            (None, zeroclean(bias4expansion_solvent)), biasBareExpansion
+        # else:
+        return zeroclean(bias0expansion), (None, zeroclean(bias1expansion_solvent)), \
+               (zeroclean(bias2expansion_solute), zeroclean(bias2expansion_solvent)), \
+               (None, zeroclean(bias3expansion_solvent)), \
+               (None, zeroclean(bias4expansion_solvent)), biasBareExpansion
 
     def rateexpansion(self, jumpnetwork_omega1, jumptype, jumpnetwork_omega34):
         """

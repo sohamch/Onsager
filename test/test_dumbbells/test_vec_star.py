@@ -371,13 +371,14 @@ class test_vecstars(unittest.TestCase):
                         bias_st_solvent2 += self.W1list[jt] * dx
 
             bias1expansion_solute, bias1expansion_solvent = self.biases[1]
+            self.assertTrue(bias1expansion_solute is None)
             self.assertTrue(count >= 1)
-            self.assertTrue(np.allclose(bias1expansion_solute, np.zeros_like(bias1expansion_solute)),
-                            msg="{}\n{}".format(bias1expansion_solute, bias1expansion_solute))
+            # self.assertTrue(np.allclose(bias1expansion_solute, np.zeros_like(bias1expansion_solute)),
+            #                 msg="{}\n{}".format(bias1expansion_solute, bias1expansion_solute))
             self.assertEqual(bias1expansion_solvent.shape[1], len(self.W1list))
 
             # get the total bias vector
-            bias1expansion_solute, bias1expansion_solvent = self.biases[1]
+            # bias1expansion_solute, bias1expansion_solvent = self.biases[1]
             tot_bias_solvent = np.dot(bias1expansion_solvent, self.W1list)
             # now get the components of the given states
             indlist = []
@@ -477,13 +478,13 @@ class test_vecstars(unittest.TestCase):
                 st2_mixed = self.vec_stars.vecpos[starindmixed][n_mixed]
 
                 # Now, we calculate the total bias vector
-                bias4_st_solute = np.zeros(self.crys_stars.crys.dim)
-                bias4_st_solute2 = np.zeros(self.crys_stars.crys.dim)
+                # bias4_st_solute = np.zeros(self.crys_stars.crys.dim)
+                # bias4_st_solute2 = np.zeros(self.crys_stars.crys.dim)
                 bias4_st_solvent = np.zeros(self.crys_stars.crys.dim)
                 bias4_st_solvent2 = np.zeros(self.crys_stars.crys.dim)
 
-                bias3_st_solute = np.zeros(self.crys_stars.crys.dim)
-                bias3_st_solute2 = np.zeros(self.crys_stars.crys.dim)
+                # bias3_st_solute = np.zeros(self.crys_stars.crys.dim)
+                # bias3_st_solute2 = np.zeros(self.crys_stars.crys.dim)
                 bias3_st_solvent = np.zeros(self.crys_stars.crys.dim)
                 bias3_st_solvent2 = np.zeros(self.crys_stars.crys.dim)
 
@@ -495,32 +496,33 @@ class test_vecstars(unittest.TestCase):
                             count += 1
                             dx = DB_disp4(self.vec_stars.starset.pdbcontainer, self.vec_stars.starset.mdbcontainer,
                                        j.state1, j.state2)
-                            dx_solute = np.zeros_like(dx)  # self.vec_stars.starset.mdbcontainer.iorlist[j.state2.db.iorind][1] / 2.
+                            # dx_solute = np.zeros_like(dx)  # self.vec_stars.starset.mdbcontainer.iorlist[j.state2.db.iorind][1] / 2.
                             # state2 is the mixed dumbbell.
                             dx_solvent = dx  #- self.vec_stars.starset.mdbcontainer.iorlist[j.state2.db.iorind][1] / 2.
-                            bias4_st_solute += self.W4list[jt] * dx_solute
+                            # bias4_st_solute += self.W4list[jt] * dx_solute
                             bias4_st_solvent += self.W4list[jt] * dx_solvent
 
                         if st2_pure == j.state1:
                             dx = DB_disp4(self.vec_stars.starset.pdbcontainer, self.vec_stars.starset.mdbcontainer,
                                        j.state1, j.state2)
-                            dx_solute = np.zeros_like(dx)  # self.vec_stars.starset.mdbcontainer.iorlist[j.state2.db.iorind][1] / 2.
+                            # dx_solute = np.zeros_like(dx)  # self.vec_stars.starset.mdbcontainer.iorlist[j.state2.db.iorind][1] / 2.
                             # state2 is the mixed dumbbell.
                             dx_solvent = dx   # - self.vec_stars.starset.mdbcontainer.iorlist[j.state2.db.iorind][1] / 2.
-                            bias4_st_solute2 += self.W4list[jt] * dx_solute
+                            # bias4_st_solute2 += self.W4list[jt] * dx_solute
                             bias4_st_solvent2 += self.W4list[jt] * dx_solvent
 
                 bias4expansion_solute, bias4expansion_solvent = self.biases[4]
+                self.assertTrue(bias4expansion_solute is None) # check that bias 4 was not created for the solute - it doesn't move
                 if st_pure.is_zero(self.vec_stars.starset.pdbcontainer):
                     # print("got origin state")
                     self.assertTrue(count == 0)
                 else:
                     self.assertTrue(count >= 0)
                 self.assertEqual(bias4expansion_solvent.shape[1], len(self.W4list))
-                self.assertEqual(bias4expansion_solute.shape[1], len(self.W4list))
+                # self.assertEqual(bias4expansion_solute.shape[1], len(self.W4list))
                 # vectors
                 tot_bias_solvent = np.dot(bias4expansion_solvent, self.W4list)
-                tot_bias_solute = np.dot(bias4expansion_solute, self.W4list)
+                # tot_bias_solute = np.dot(bias4expansion_solute, self.W4list)
 
                 # now get the components
                 indlist = []
@@ -532,8 +534,8 @@ class test_vecstars(unittest.TestCase):
                 bias_cartesian_solvent = sum([tot_bias_solvent[i] * self.vec_stars.vecvec[i][0] for i in indlist])
                 bias_cartesian_solvent2 = sum([tot_bias_solvent[i] * self.vec_stars.vecvec[i][n_pure] for i in indlist])
 
-                bias_cartesian_solute = sum([tot_bias_solute[i] * self.vec_stars.vecvec[i][0] for i in indlist])
-                bias_cartesian_solute2 = sum([tot_bias_solute[i] * self.vec_stars.vecvec[i][n_pure] for i in indlist])
+                # bias_cartesian_solute = sum([tot_bias_solute[i] * self.vec_stars.vecvec[i][0] for i in indlist])
+                # bias_cartesian_solute2 = sum([tot_bias_solute[i] * self.vec_stars.vecvec[i][n_pure] for i in indlist])
 
                 self.assertTrue(np.allclose(bias_cartesian_solvent, bias4_st_solvent),
                                 msg="\n{}\n{}".format(bias_cartesian_solvent, bias4_st_solvent))
@@ -541,11 +543,11 @@ class test_vecstars(unittest.TestCase):
                 self.assertTrue(np.allclose(bias_cartesian_solvent2, bias4_st_solvent2),
                                 msg="\n{}\n{}".format(bias_cartesian_solvent2, bias4_st_solvent2))
 
-                self.assertTrue(np.allclose(bias_cartesian_solute, bias4_st_solute),
-                                msg="\n{}\n{}".format(bias_cartesian_solute, bias4_st_solute))
-
-                self.assertTrue(np.allclose(bias_cartesian_solute2, bias4_st_solute2),
-                                msg="\n{}\n{}".format(bias_cartesian_solute2, bias4_st_solute2))
+                # self.assertTrue(np.allclose(bias_cartesian_solute, bias4_st_solute),
+                #                 msg="\n{}\n{}".format(bias_cartesian_solute, bias4_st_solute))
+                #
+                # self.assertTrue(np.allclose(bias_cartesian_solute2, bias4_st_solute2),
+                #                 msg="\n{}\n{}".format(bias_cartesian_solute2, bias4_st_solute2))
 
                 count = 0
                 for jt, jlist in enumerate(self.symjumplist_omega3):
@@ -555,25 +557,26 @@ class test_vecstars(unittest.TestCase):
                             count += 1
                             dx = -DB_disp4(self.vec_stars.starset.pdbcontainer, self.vec_stars.starset.mdbcontainer,
                                         j.state2, j.state1)
-                            dx_solute = np.zeros_like(dx)  #-self.vec_stars.starset.mdbcontainer.iorlist[j.state1.db.iorind][1] / 2.
+                            # dx_solute = np.zeros_like(dx)  #-self.vec_stars.starset.mdbcontainer.iorlist[j.state1.db.iorind][1] / 2.
                             dx_solvent = dx   #+ self.vec_stars.starset.mdbcontainer.iorlist[j.state1.db.iorind][1] / 2.
-                            bias3_st_solute += self.W3list[jt] * dx_solute
+                            # bias3_st_solute += self.W3list[jt] * dx_solute
                             bias3_st_solvent += self.W3list[jt] * dx_solvent
                         if st2_mixed == j.state1:
                             dx = -DB_disp4(self.vec_stars.starset.pdbcontainer, self.vec_stars.starset.mdbcontainer,
                                         j.state2, j.state1)
-                            dx_solute = np.zeros_like(dx)  #-self.vec_stars.starset.mdbcontainer.iorlist[j.state1.db.iorind][1] / 2.
+                            # dx_solute = np.zeros_like(dx)  #-self.vec_stars.starset.mdbcontainer.iorlist[j.state1.db.iorind][1] / 2.
                             dx_solvent = dx  #+ self.vec_stars.starset.mdbcontainer.iorlist[j.state1.db.iorind][1] / 2.
-                            bias3_st_solute2 += self.W3list[jt] * dx_solute
+                            # bias3_st_solute2 += self.W3list[jt] * dx_solute
                             bias3_st_solvent2 += self.W3list[jt] * dx_solvent
 
                 bias3expansion_solute, bias3expansion_solvent = self.biases[3]
+                self.assertTrue(bias3expansion_solute is None)  # check that bias 4 was not created for the solute - it doesn't move
                 self.assertTrue(count >= 1)
                 self.assertEqual(bias3expansion_solvent.shape[1], len(self.W3list))
-                self.assertEqual(bias3expansion_solute.shape[1], len(self.W3list))
+                # self.assertEqual(bias3expansion_solute.shape[1], len(self.W3list))
                 # vectors
                 tot_bias_solvent = np.dot(bias3expansion_solvent, self.W3list)
-                tot_bias_solute = np.dot(bias3expansion_solute, self.W3list)
+                # tot_bias_solute = np.dot(bias3expansion_solute, self.W3list)
 
                 # now get the components
                 indlist = []
@@ -590,12 +593,12 @@ class test_vecstars(unittest.TestCase):
                      in
                      indlist])
 
-                bias_cartesian_solute = sum(
-                    [tot_bias_solute[idx - self.vec_stars.Nvstars_pure] * self.vec_stars.vecvec[idx][0] for idx in
-                     indlist])
-                bias_cartesian_solute2 = sum(
-                    [tot_bias_solute[idx - self.vec_stars.Nvstars_pure] * self.vec_stars.vecvec[idx][n_mixed] for idx in
-                     indlist])
+                # bias_cartesian_solute = sum(
+                #     [tot_bias_solute[idx - self.vec_stars.Nvstars_pure] * self.vec_stars.vecvec[idx][0] for idx in
+                #      indlist])
+                # bias_cartesian_solute2 = sum(
+                #     [tot_bias_solute[idx - self.vec_stars.Nvstars_pure] * self.vec_stars.vecvec[idx][n_mixed] for idx in
+                #      indlist])
 
                 self.assertTrue(np.allclose(bias_cartesian_solvent, bias3_st_solvent),
                                 msg="{}\n{}".format(bias_cartesian_solvent,
@@ -603,11 +606,11 @@ class test_vecstars(unittest.TestCase):
                 self.assertTrue(np.allclose(bias_cartesian_solvent2, bias3_st_solvent2),
                                 msg="{}\n{}".format(bias_cartesian_solvent2, bias3_st_solvent2))
 
-                self.assertTrue(np.allclose(bias_cartesian_solute, bias3_st_solute),
-                                msg="{}\n{}".format(bias_cartesian_solute,
-                                                    bias3_st_solute))  # should get the same bias vector anyway
-                self.assertTrue(np.allclose(bias_cartesian_solute2, bias3_st_solute2),
-                                msg="{}\n{}".format(bias_cartesian_solute2, bias3_st_solute2))
+                # self.assertTrue(np.allclose(bias_cartesian_solute, bias3_st_solute),
+                #                 msg="{}\n{}".format(bias_cartesian_solute,
+                #                                     bias3_st_solute))  # should get the same bias vector anyway
+                # self.assertTrue(np.allclose(bias_cartesian_solute2, bias3_st_solute2),
+                #                 msg="{}\n{}".format(bias_cartesian_solute2, bias3_st_solute2))
 
     def test_rateExps(self):
         """
