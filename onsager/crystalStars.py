@@ -1508,7 +1508,7 @@ class DBStarSet(object):
                 (i, j), dx - where i and j denote the indices of the initial and final states and dx
                 is the site-to-site distance for the jump.
 
-                - jtags - dictionary of arrays containing initial and final states of dumbbell jumps. This is used in
+                - jtags - dictionary of lists containing initial(key) and all final states(values) of dumbbell jumps. This is used in
                 non-local relaxation vector calculations.
 
             - jumptype - list mapping back the omega_1 jumps to omega_0 jumps.
@@ -1628,7 +1628,7 @@ class DBStarSet(object):
                  Note - The indices for solute-pure dumbbell complexes are indexed found in complexIndexdict
                  and that of the mixed dumbbells in the mixedindexdict dictionaries.
 
-                 - jtags - dictionary of arrays containing initial and final states of dumbbell jumps. This is used in
+                 - jtags - dictionary of lists containing initial (key) and all final states (values) of dumbbell jumps. This is used in
                  non-local relaxation vector calculations.
          """
         # building omega_4 -> association - c2=-1 -> since solvent movement is tracked
