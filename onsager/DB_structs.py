@@ -239,8 +239,8 @@ class jump(NT_jmp):
 NT_conn = namedtuple('connector', 'state1 state2')
 class connector(NT_conn):
     """
-    An object that simply connects two dumbbell objects (state1 and state2). It is a way to view the first
-    dumbbell loacted in space relatively to the first dumbbell.
+    An object that simply connects two dumbbell objects (state1 and state2). It is a way to view the second
+    dumbbell located in space relatively to the first dumbbell.
     Similar to the jump object, but does not contain information regarding connecting path (c1, c2).
     This is used to compute Green's functions between the dumbbells (see GFExpansion function in DBVectorStars).
     """
