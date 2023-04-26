@@ -24,7 +24,7 @@ def collision_self(dbcontainer, dbcontainer2, jump, cutoff12, cutoff13=None):
 
     def iscolliding(a0i, a1i, a0j, a1j, cutoff):
         """
-        checks if two atoms are considered to be colliding within the time specified
+        checks if two atoms are considered to be colliding within the cutoff specified
         Parameters:
             - a0i - the initial position of the first atom.
             - a1i - the total dispalcement of the first atom during the jump (a0i + a1i is the final positon).
@@ -107,7 +107,7 @@ def collision_self(dbcontainer, dbcontainer2, jump, cutoff12, cutoff13=None):
 
 def collision_others(container, container2, jmp, closestdistance):
     """
-    Takes a jump and sees if the moving atom of the dumbbell collides with any other atom.
+    Takes a jump and sees if the moving atom of the dumbbell collides with any other atom, within a cuttoff distance.
     params:
         container - the dumbbell states container (instance of either dbStates or mStates from states.py module)
         container - the second dumbbell states container in case the jumps are occurring between pure and mixed spaces.
